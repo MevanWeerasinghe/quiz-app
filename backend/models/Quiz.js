@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const quizSchema = new mongoose.Schema({
   title: { type: String, required: true },
   creator: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: "User",
     required: true,
   },
