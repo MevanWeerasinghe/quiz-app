@@ -1,3 +1,4 @@
+// backend/controllers/quizController.js
 const Quiz = require("../models/Quiz");
 const Question = require("../models/Question");
 const { generateQuizWithGemini } = require("../utils/geminiApi");
@@ -72,7 +73,13 @@ Instructions: ${
   const result = await generateQuizWithGemini(prompt);
 
   try {
-    const parsed = JSON.parse(result);
+    // Strip Markdown code block if present
+    const cleanResult = result
+      .replace(/^```json\s*/i, "") // remove starting ```json
+      .replace(/```$/, "") // remove ending ```
+      .trim();
+
+    const parsed = JSON.parse(cleanResult);
     res.status(200).json(parsed);
   } catch (err) {
     res
@@ -129,10 +136,48 @@ const createAIQuizWithQuestions = async (req, res) => {
   }
 };
 
+const getQuizById = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId).populate("questions");
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+    res.json(quiz);
+  } catch (err) {
+    res.status(500).json({ message: "Quiz fetch failed", error: err.message });
+  }
+};
+
+const updateQuestion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text, options, correctIndex } = req.body;
+
+    if (!Array.isArray(options) || options.length < 2 || options.length > 5) {
+      return res.status(400).json({ message: "Options must be 2–5 items." });
+    }
+    if (correctIndex < 0 || correctIndex >= options.length) {
+      return res.status(400).json({ message: "correctIndex out of range." });
+    }
+
+    const updated = await Question.findByIdAndUpdate(
+      id,
+      { text, options, correctIndex },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Update failed", error: err.message });
+  }
+};
+
 // Export all controller functions
 module.exports = {
   createQuiz,
   getUserQuizzes,
   generateAIQuiz,
   createAIQuizWithQuestions,
+  getQuizById,
+  updateQuestion,
 };

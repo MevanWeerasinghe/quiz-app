@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 
 interface Quiz {
@@ -13,6 +13,14 @@ interface Quiz {
 export default function CreateQuizPage() {
   const { user } = useUser();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [origin, setOrigin] = useState<string>("");
+
+  useEffect(() => {
+    // capture current origin for link building (window is client-only)
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -22,15 +30,12 @@ export default function CreateQuizPage() {
           `http://localhost:5000/api/quizzes/user/${user.id}`
         );
         const data = await res.json();
-        console.log("Raw quizzes data from backend:", data); // 🔍 DEBUG HERE
-
         if (Array.isArray(data)) {
           setQuizzes(data);
         } else {
-          console.error("Expected an array but got:", data); // 🔍 DEBUG HERE
+          console.error("Expected an array but got:", data);
           setQuizzes([]);
         }
-        //setQuizzes(data);
       } catch (error) {
         console.error("Failed to load quizzes:", error);
       }
@@ -38,6 +43,15 @@ export default function CreateQuizPage() {
 
     fetchQuizzes();
   }, [user]);
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Link copied!");
+    } catch {
+      alert("Failed to copy link");
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
@@ -68,14 +82,55 @@ export default function CreateQuizPage() {
         <p className="text-gray-500">You haven’t created any quizzes yet.</p>
       ) : (
         <ul className="space-y-4">
-          {quizzes.map((quiz) => (
-            <li key={quiz._id} className="border p-4 rounded-lg">
-              <h3 className="text-lg font-semibold">{quiz.title}</h3>
-              <p className="text-sm text-gray-500">
-                Created on {new Date(quiz.createdAt).toLocaleDateString()}
-              </p>
-            </li>
-          ))}
+          {quizzes.map((quiz) => {
+            const quizUrl = origin
+              ? `${origin}/quiz/${quiz._id}`
+              : `/quiz/${quiz._id}`;
+            return (
+              <li key={quiz._id} className="border p-4 rounded-lg">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                    <p className="text-sm text-gray-500">
+                      Created on {new Date(quiz.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* View should open the preview+edit page */}
+                    <Link
+                      href={`/quiz/${quiz._id}/view`}
+                      className="px-3 py-2 bg-gray-100 border rounded hover:bg-gray-200 text-sm"
+                    >
+                      View
+                    </Link>
+
+                    {/* Open should go to dashboard (submissions/stats) */}
+                    <Link
+                      href={`/quiz/${quiz._id}/dashboard`}
+                      className="px-3 py-2 bg-blue-600 text-white rounded hover:opacity-90 text-sm"
+                    >
+                      Open
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Share link + copy */}
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    value={quizUrl}
+                    readOnly
+                  />
+                  <button
+                    onClick={() => handleCopy(quizUrl)}
+                    className="px-3 py-2 bg-purple-600 text-white rounded text-sm hover:opacity-90"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
