@@ -8,14 +8,25 @@ const {
   createAIQuizWithQuestions,
   getQuizById,
   updateQuestion,
+  updateQuiz,
+  deleteQuiz,
 } = require("../controllers/quizController");
 
-router.post("/", createQuiz);
+// Order matters: specific routes first
 router.get("/user/:userId", getUserQuizzes);
-router.get("/:quizId", getQuizById);
+
+// Question update (no conflict with quizId routes)
+router.put("/questions/:id", updateQuestion);
+
+// AI routes
 router.post("/generate-ai", generateAIQuiz);
 router.post("/save-ai", createAIQuizWithQuestions);
-router.put("/:id", updateQuestion);
+
+// Quiz CRUD
+router.post("/", createQuiz);
+router.get("/:quizId", getQuizById);
+router.put("/:quizId", updateQuiz); // update quiz metadata
+router.delete("/:quizId", deleteQuiz); // delete quiz
 module.exports = router;
 
 createAIQuizWithQuestions;

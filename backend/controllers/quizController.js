@@ -33,16 +33,72 @@ const createQuiz = async (req, res) => {
   }
 };
 
-// Get all quizzes created by a user
+// Get all quizzes created by a user, with optional search
 const getUserQuizzes = async (req, res) => {
   try {
     const { userId } = req.params;
-    const quizzes = await Quiz.find({ creator: userId }).populate("questions");
+    const { search } = req.query;
+
+    const query = { creator: userId };
+    if (search) {
+      query.title = { $regex: search, $options: "i" };
+    }
+
+    const quizzes = await Quiz.find(query)
+      .sort({ createdAt: -1 })
+      .populate("questions");
+
     res.status(200).json(quizzes);
   } catch (err) {
     res
       .status(500)
       .json({ message: "Fetching quizzes failed", error: err.message });
+  }
+};
+
+// Delete quiz by id
+const deleteQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    // Delete related questions
+    await Question.deleteMany({ quizId });
+
+    // Delete the quiz
+    const deleted = await Quiz.findByIdAndDelete(quizId);
+    if (!deleted) {
+      return res.status(404).json({ message: "Quiz not found" });
+    }
+
+    res.json({ message: "Quiz deleted successfully" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Quiz deletion failed", error: err.message });
+  }
+};
+
+// Update quiz metadata
+const updateQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { title, timeLimit, allowBack, showResult } = req.body;
+
+    const updated = await Quiz.findByIdAndUpdate(
+      quizId,
+      { title, timeLimit, allowBack, showResult },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Quiz not found" });
+    }
+
+    // Populate questions
+    await updated.populate("questions");
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Quiz update failed", error: err.message });
   }
 };
 
@@ -176,6 +232,8 @@ const updateQuestion = async (req, res) => {
 module.exports = {
   createQuiz,
   getUserQuizzes,
+  deleteQuiz,
+  updateQuiz,
   generateAIQuiz,
   createAIQuizWithQuestions,
   getQuizById,

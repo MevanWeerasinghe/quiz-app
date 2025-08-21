@@ -67,67 +67,83 @@ export default function ManualCreatePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-4">
-      <h1 className="text-2xl font-bold mb-6">Manual Quiz Creator</h1>
+    <div className="max-w-3xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+      <h1 className="text-2xl font-bold mb-6 text-white">
+        Manual Quiz Creator
+      </h1>
 
+      {/* Quiz meta */}
       <div className="mb-4">
-        <label className="block font-medium">Quiz Title</label>
+        <label className="block font-medium text-white mb-1">Quiz Title</label>
         <input
           type="text"
-          className="border p-2 w-full rounded"
+          className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          placeholder="Enter a descriptive title…"
         />
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-4">
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block font-medium">Time Limit (min)</label>
+          <label className="block font-medium text-white mb-1">
+            Time Limit (min)
+          </label>
           <input
             type="number"
-            className="border p-2 w-full rounded"
+            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
             value={timeLimit}
-            onChange={(e) => setTimeLimit(parseInt(e.target.value))}
+            onChange={(e) => setTimeLimit(parseInt(e.target.value || "0", 10))}
+            min={0}
           />
         </div>
-        <div className="flex gap-4 items-center mt-6">
-          <label className="flex gap-2 items-center">
+
+        <div className="flex gap-6 items-center md:mt-7">
+          <label className="flex gap-2 items-center text-white">
             <input
               type="checkbox"
               checked={allowBack}
               onChange={(e) => setAllowBack(e.target.checked)}
+              className="accent-[#1DCD9F]"
             />
             Allow Back
           </label>
-          <label className="flex gap-2 items-center">
+          <label className="flex gap-2 items-center text-white">
             <input
               type="checkbox"
               checked={showResult}
               onChange={(e) => setShowResult(e.target.checked)}
+              className="accent-[#1DCD9F]"
             />
             Show Result
           </label>
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mt-8 mb-2">Questions</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-white">Questions</h2>
+
       {questions.map((q, idx) => (
-        <div key={idx} className="mb-6 border rounded p-4">
-          <label className="block font-medium mb-1">Question {idx + 1}</label>
+        <div
+          key={idx}
+          className="mb-6 border border-[#169976] rounded p-4 bg-[#222222]"
+        >
+          <label className="block font-medium mb-2 text-white">
+            Question {idx + 1}
+          </label>
           <input
             type="text"
-            className="border p-2 w-full rounded mb-2"
+            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded mb-3 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
             placeholder="Question text"
             value={q.text}
             onChange={(e) => handleQuestionChange(idx, "text", e.target.value)}
           />
 
-          <div className="grid grid-cols-2 gap-4 mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
             {q.options.map((opt, i) => (
               <input
                 key={i}
                 type="text"
-                className="border p-2 rounded"
+                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
                 placeholder={`Option ${i + 1}`}
                 value={opt}
                 onChange={(e) =>
@@ -137,9 +153,11 @@ export default function ManualCreatePage() {
             ))}
           </div>
 
-          <label className="block font-medium">Correct Option</label>
+          <label className="block font-medium text-white mb-1">
+            Correct Option
+          </label>
           <select
-            className="border p-2 rounded"
+            className="border border-[#169976] bg-[#000000] text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
             value={q.correctIndex}
             onChange={(e) =>
               handleQuestionChange(idx, "correctIndex", e.target.value)
@@ -155,7 +173,7 @@ export default function ManualCreatePage() {
       ))}
 
       <button
-        className="mb-6 bg-green-500 text-white py-2 px-4 rounded"
+        className="mb-6 px-4 py-2 rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#000000] transition"
         onClick={addQuestion}
       >
         + Add Question
@@ -163,7 +181,7 @@ export default function ManualCreatePage() {
 
       <div>
         <button
-          className="bg-purple-600 text-white py-3 px-6 rounded text-lg"
+          className="bg-[#1DCD9F] text-[#000000] py-3 px-6 rounded text-lg hover:bg-[#169976] transition"
           onClick={handleSubmit}
         >
           Save Quiz

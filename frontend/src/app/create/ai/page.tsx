@@ -79,47 +79,60 @@ export default function AIGeneratePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-4">
-      <h1 className="text-2xl font-bold mb-6">Generate Quiz with AI</h1>
+    <div className="max-w-3xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+      <h1 className="text-2xl font-bold mb-6 text-white">
+        Generate Quiz with AI
+      </h1>
 
-      <div className="grid gap-4 mb-8">
+      {/* Generator controls */}
+      <div className="grid gap-4 mb-8 border border-[#169976] rounded-lg p-4 bg-[#222222]">
         <label className="block">
-          <span className="block font-medium mb-1">Topic</span>
+          <span className="block font-medium mb-1 text-white">Topic</span>
           <input
-            className="border p-2 rounded w-full"
+            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
             placeholder="e.g. World War II, JavaScript"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-4">
-          <label>
-            <span className="block font-medium mb-1">Number of Questions</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block font-medium mb-1 text-white">
+              Number of Questions
+            </span>
             <input
               type="number"
-              className="border p-2 rounded w-full"
+              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
               value={numQuestions}
-              onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+              onChange={(e) =>
+                setNumQuestions(parseInt(e.target.value || "0", 10))
+              }
+              min={1}
             />
           </label>
-          <label>
-            <span className="block font-medium mb-1">Options per Question</span>
+          <label className="block">
+            <span className="block font-medium mb-1 text-white">
+              Options per Question
+            </span>
             <input
               type="number"
-              className="border p-2 rounded w-full"
+              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
               value={numOptions}
-              onChange={(e) => setNumOptions(parseInt(e.target.value))}
+              onChange={(e) =>
+                setNumOptions(parseInt(e.target.value || "0", 10))
+              }
+              min={2}
             />
           </label>
         </div>
 
         <label className="block">
-          <span className="block font-medium mb-1">
+          <span className="block font-medium mb-1 text-white">
             Prompt Instructions (optional)
           </span>
           <textarea
-            className="border p-2 rounded w-full"
+            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
             rows={3}
             placeholder="e.g. Include mix of biology, physics, chemistry"
             value={promptInstructions}
@@ -129,7 +142,7 @@ export default function AIGeneratePage() {
 
         <button
           onClick={handleGenerate}
-          className="bg-blue-600 text-white px-6 py-2 rounded"
+          className="bg-[#1DCD9F] text-[#000000] px-6 py-2 rounded font-medium hover:bg-[#169976] transition disabled:opacity-60 disabled:cursor-not-allowed"
           disabled={loading}
         >
           {loading ? "Generating..." : "Generate with AI"}
@@ -138,43 +151,55 @@ export default function AIGeneratePage() {
 
       {questions.length > 0 && (
         <>
-          <h2 className="text-xl font-semibold mb-2">Preview & Save</h2>
+          <h2 className="text-xl font-semibold mb-2 text-white">
+            Preview &amp; Save
+          </h2>
 
-          <div className="mb-4">
-            <label className="block font-medium">Quiz Title</label>
+          <div className="mb-4 border border-[#169976] rounded-lg p-4 bg-[#222222]">
+            <label className="block font-medium text-white mb-1">
+              Quiz Title
+            </label>
             <input
               type="text"
-              className="border p-2 w-full rounded"
+              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
               placeholder="Enter quiz title"
               value={quizTitle}
               onChange={(e) => setQuizTitle(e.target.value)}
             />
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-medium">Time Limit (min)</label>
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
+              <label className="block font-medium text-white mb-1">
+                Time Limit (min)
+              </label>
               <input
                 type="number"
-                className="border p-2 w-full rounded"
+                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
                 value={timeLimit}
-                onChange={(e) => setTimeLimit(parseInt(e.target.value))}
+                onChange={(e) =>
+                  setTimeLimit(parseInt(e.target.value || "0", 10))
+                }
+                min={0}
               />
             </div>
-            <div className="flex gap-4 items-center mt-6">
-              <label className="flex gap-2 items-center">
+
+            <div className="border border-[#169976] rounded-lg p-4 bg-[#222222] flex gap-6 items-center">
+              <label className="flex gap-2 items-center text-white">
                 <input
                   type="checkbox"
                   checked={allowBack}
                   onChange={(e) => setAllowBack(e.target.checked)}
+                  className="accent-[#1DCD9F]"
                 />
                 Allow Back
               </label>
-              <label className="flex gap-2 items-center">
+              <label className="flex gap-2 items-center text-white">
                 <input
                   type="checkbox"
                   checked={showResult}
                   onChange={(e) => setShowResult(e.target.checked)}
+                  className="accent-[#1DCD9F]"
                 />
                 Show Result
               </label>
@@ -183,14 +208,24 @@ export default function AIGeneratePage() {
 
           <ul className="space-y-4 mb-6">
             {questions.map((q, idx) => (
-              <li key={idx} className="border p-4 rounded">
-                <p className="font-medium mb-1">
+              <li
+                key={idx}
+                className="border border-[#169976] p-4 rounded bg-[#222222]"
+              >
+                <p className="font-medium mb-2 text-white">
                   {idx + 1}. {q.text}
                 </p>
-                <ul className="list-disc ml-6 text-sm text-gray-600">
+                <ul className="list-disc ml-6 text-sm">
                   {q.options.map((opt: string, i: number) => (
-                    <li key={i}>
-                      {opt} {q.correctIndex === i && "(✔️ correct)"}
+                    <li
+                      key={i}
+                      className={
+                        q.correctIndex === i
+                          ? "text-[#1DCD9F]"
+                          : "text-white/70"
+                      }
+                    >
+                      {opt} {q.correctIndex === i && " (✔️ correct)"}
                     </li>
                   ))}
                 </ul>
@@ -200,7 +235,7 @@ export default function AIGeneratePage() {
 
           <button
             onClick={handleSave}
-            className="bg-green-600 text-white px-6 py-3 rounded text-lg"
+            className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded text-lg font-medium hover:bg-[#169976] transition"
           >
             Save Quiz
           </button>

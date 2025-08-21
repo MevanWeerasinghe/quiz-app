@@ -34,30 +34,33 @@ export default function AnswerLandingPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto py-10 px-4">
-      <h1 className="text-2xl font-bold mb-4">Answer a Quiz</h1>
-      <p className="text-gray-600 mb-4">
-        Paste a quiz link (e.g., <code>https://yourapp.com/quiz/123</code>) or
-        just the quiz ID.
-      </p>
+    <div className="max-w-xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+      <div className="border border-[#169976] rounded-xl bg-[#222222] p-6 shadow-lg">
+        <h1 className="text-2xl font-bold mb-3 text-white">Answer a Quiz</h1>
+        <p className="text-white/80 mb-5">
+          Paste a quiz link (e.g.,{" "}
+          <code className="text-white/90">https://yourapp.com/quiz/123</code>)
+          or just the quiz ID.
+        </p>
 
-      <div className="flex gap-2">
-        <input
-          className="flex-1 border rounded px-3 py-2"
-          placeholder="Paste link or ID..."
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") goToQuiz();
-          }}
-        />
-        <button
-          onClick={goToQuiz}
-          className="px-4 py-2 bg-purple-600 text-white rounded hover:opacity-90"
-          disabled={loading}
-        >
-          {loading ? "Loading..." : "Enter"}
-        </button>
+        <div className="flex gap-2">
+          <input
+            className="flex-1 border border-[#169976] rounded-lg px-3 py-2 bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+            placeholder="Paste link or ID..."
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") goToQuiz();
+            }}
+          />
+          <button
+            onClick={goToQuiz}
+            className="px-5 py-2 rounded-lg bg-[#1DCD9F] text-[#000000] font-medium hover:bg-[#169976] transition disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "Enter"}
+          </button>
+        </div>
       </div>
     </div>
   );

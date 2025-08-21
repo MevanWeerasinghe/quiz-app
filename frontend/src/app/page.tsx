@@ -33,21 +33,30 @@ export default function Home() {
   }, [user]);
 
   return (
-    <main className="p-10 text-center">
-      <h1 className="text-4xl font-bold mb-4">Welcome to the Quiz App</h1>
-      <p className="mb-10 text-gray-600">
+    <main className="min-h-[calc(100vh-64px)] p-10 text-center bg-[#000000]">
+      <h1 className="text-4xl font-bold mb-4 text-white">
+        Welcome to the Quiz App
+      </h1>
+
+      <p className="mb-10 text-[#cfcfcf]">
         Create quizzes. Share them. Let others answer.
       </p>
 
       <SignedIn>
         <div className="flex justify-center gap-6">
           <Link href="/create">
-            <button className="bg-purple-600 text-white px-6 py-3 rounded-md font-medium">
+            <button
+              className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded-md font-medium hover:bg-[#169976] transition-colors"
+              aria-label="Go to Quiz Builder"
+            >
               Go to Quiz Builder
             </button>
           </Link>
           <Link href="/answer">
-            <button className="bg-gray-200 px-6 py-3 rounded-md font-medium">
+            <button
+              className="border border-[#1DCD9F] text-[#1DCD9F] px-6 py-3 rounded-md font-medium hover:bg-[#222222] transition-colors"
+              aria-label="Go to Answer Quiz"
+            >
               Go to Answer Quiz
             </button>
           </Link>
@@ -55,7 +64,7 @@ export default function Home() {
       </SignedIn>
 
       <SignedOut>
-        <p className="text-gray-500">
+        <p className="text-[#b5b5b5]">
           Please sign in to create or answer quizzes.
         </p>
       </SignedOut>

@@ -11,40 +11,48 @@ import {
 
 export default function Navbar() {
   return (
-    <nav className="bg-purple-50 border-b border-purple-200 px-6 py-4 flex items-center justify-between shadow-sm">
-      <div className="text-xl font-bold text-purple-700">
-        <Link href="/">Quiz App</Link>
+    <nav className="bg-[#222222] border-b border-[#169976] px-6 py-4 flex items-center justify-between shadow-sm">
+      <div className="text-xl font-bold">
+        <Link
+          href="/"
+          className="text-[#1DCD9F] hover:text-[#169976] transition-colors"
+        >
+          Quiz App
+        </Link>
       </div>
+
       <div className="flex items-center gap-6">
         <Link
           href="/"
-          className="text-purple-800 hover:text-purple-600 font-medium"
+          className="text-white/90 hover:text-white transition-colors font-medium"
         >
           Home
         </Link>
+
         <SignedIn>
           <Link
             href="/create"
-            className="text-purple-800 hover:text-purple-600 font-medium"
+            className="text-white/90 hover:text-white transition-colors font-medium"
           >
             Create
           </Link>
           <Link
             href="/answer"
-            className="text-purple-800 hover:text-purple-600 font-medium"
+            className="text-white/90 hover:text-white transition-colors font-medium"
           >
             Answer
           </Link>
           <UserButton afterSignOutUrl="/" />
         </SignedIn>
+
         <SignedOut>
           <SignInButton>
-            <button className="bg-white border border-purple-500 text-purple-600 rounded-full font-medium text-sm h-10 px-4">
+            <button className="bg-transparent border border-[#1DCD9F] text-[#1DCD9F] rounded-full font-medium text-sm h-10 px-4 hover:bg-[#000000] transition-colors">
               Sign In
             </button>
           </SignInButton>
           <SignUpButton>
-            <button className="bg-purple-600 text-white rounded-full font-medium text-sm h-10 px-5">
+            <button className="bg-[#1DCD9F] text-[#000000] rounded-full font-medium text-sm h-10 px-5 hover:bg-[#169976] transition-colors">
               Sign Up
             </button>
           </SignUpButton>

@@ -129,90 +129,122 @@ export default function QuizAnswerPage() {
     }
   };
 
-  if (!isLoaded) return <div className="p-6">Loading...</div>;
+  if (!isLoaded)
+    return (
+      <div className="p-6 text-white bg-[#000000] min-h-[calc(100vh-64px)]">
+        Loading...
+      </div>
+    );
   if (!isSignedIn) return null; // redirecting
-  if (!quiz) return <div className="p-6">Loading quiz...</div>;
+  if (!quiz)
+    return (
+      <div className="p-6 text-white bg-[#000000] min-h-[calc(100vh-64px)]">
+        Loading quiz...
+      </div>
+    );
 
   // Start modal (shown before answering)
   if (!started && !isSubmitted) {
     return (
-      <div className="max-w-2xl mx-auto py-10 px-4">
-        <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
-        <ul className="text-gray-700 mb-6">
-          <li>Questions: {quiz.questions.length}</li>
-          <li>Time limit: {quiz.timeLimit} min</li>
-          <li>{quiz.allowBack ? "Back allowed" : "Back not allowed"}</li>
-          <li>
-            {quiz.showResult ? "Result shown after submit" : "Result hidden"}
-          </li>
-        </ul>
-        <button
-          onClick={() => setStarted(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded hover:opacity-90"
-        >
-          Start Quiz
-        </button>
+      <div className="max-w-2xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+        <div className="border border-[#169976] bg-[#222222] rounded-lg p-6">
+          <h1 className="text-3xl font-bold mb-2 text-white">{quiz.title}</h1>
+          <ul className="text-white/80 mb-6">
+            <li>Questions: {quiz.questions.length}</li>
+            <li>Time limit: {quiz.timeLimit} min</li>
+            <li>{quiz.allowBack ? "Back allowed" : "Back not allowed"}</li>
+            <li>
+              {quiz.showResult ? "Result shown after submit" : "Result hidden"}
+            </li>
+          </ul>
+          <button
+            onClick={() => setStarted(true)}
+            className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded font-medium hover:bg-[#169976] transition"
+          >
+            Start Quiz
+          </button>
+        </div>
       </div>
     );
   }
 
   if (isSubmitted) {
     return (
-      <div className="max-w-2xl mx-auto p-6 text-center">
-        <h1 className="text-3xl font-bold mb-4">Quiz Completed</h1>
-        {quiz.showResult ? (
-          <p className="text-lg mb-2">
-            Your score: <span className="font-bold">{score}</span> /{" "}
-            {quiz.questions.length}
-          </p>
-        ) : (
-          <p className="text-lg mb-2">Your submission has been recorded.</p>
-        )}
-        {submitErr && <p className="text-red-600 mb-4">{submitErr}</p>}
+      <div className="max-w-2xl mx-auto p-6 text-center bg-[#000000] min-h-[calc(100vh-64px)]">
+        <div className="border border-[#169976] bg-[#222222] rounded-lg p-8">
+          <h1 className="text-3xl font-bold mb-4 text-white">Quiz Completed</h1>
+          {quiz.showResult ? (
+            <p className="text-lg mb-2 text-white">
+              Your score:{" "}
+              <span className="font-bold text-[#1DCD9F]">{score}</span> /{" "}
+              {quiz.questions.length}
+            </p>
+          ) : (
+            <p className="text-lg mb-2 text-white">
+              Your submission has been recorded.
+            </p>
+          )}
+          {submitErr && (
+            <p className="mt-3 text-white/90 border border-[#169976] rounded px-3 py-2 inline-block">
+              {submitErr}
+            </p>
+          )}
 
-        {/* Only navigate to Home for respondents. Dashboard is creator-only. */}
-        <button
-          onClick={() => router.push(`/`)}
-          className="bg-purple-600 text-white px-6 py-3 rounded-md hover:opacity-90"
-        >
-          Go to Home
-        </button>
+          {/* Only navigate to Home for respondents. Dashboard is creator-only. */}
+          <div className="mt-6">
+            <button
+              onClick={() => router.push(`/`)}
+              className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded-md font-medium hover:bg-[#169976] transition"
+            >
+              Go to Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-3xl mx-auto p-6 bg-[#000000] min-h-[calc(100vh-64px)]">
       {/* Header */}
-      <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">{quiz.title}</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-white">{quiz.title}</h1>
         {quiz.timeLimit > 0 && (
-          <div className="text-lg font-semibold">
-            Time Left: {Math.floor(timeLeft / 60)}:
-            {String(timeLeft % 60).padStart(2, "0")}
+          <div className="text-lg font-semibold text-white">
+            Time Left:{" "}
+            <span className="text-[#1DCD9F]">
+              {Math.floor(timeLeft / 60)}:
+              {String(timeLeft % 60).padStart(2, "0")}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Question */}
-      <div className="mb-6">
-        <p className="text-lg font-medium mb-4">
+      {/* Question Card */}
+      <div className="mb-6 border border-[#169976] bg-[#222222] rounded-lg p-5">
+        <p className="text-lg font-medium mb-4 text-white">
           {currentIndex + 1}. {question?.text}
         </p>
+
         <div className="space-y-3">
-          {question?.options.map((opt, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleOptionSelect(idx)}
-              className={`w-full text-left px-4 py-2 border rounded-md ${
-                answers[currentIndex] === idx
-                  ? "bg-purple-100 border-purple-500"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              {opt}
-            </button>
-          ))}
+          {question?.options.map((opt, idx) => {
+            const selected = answers[currentIndex] === idx;
+            return (
+              <button
+                key={idx}
+                onClick={() => handleOptionSelect(idx)}
+                className={[
+                  "w-full text-left px-4 py-2 rounded-md transition",
+                  "border",
+                  selected
+                    ? "px-4 py-2 rounded-md bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
+                    : "bg-[#000000] border-[#169976] hover:bg-[#222222] text-white",
+                ].join(" ")}
+              >
+                {opt}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -221,7 +253,7 @@ export default function QuizAnswerPage() {
         <button
           onClick={handlePrev}
           disabled={!quiz.allowBack || currentIndex === 0}
-          className="bg-gray-200 px-4 py-2 rounded-md disabled:opacity-50"
+          className="px-4 py-2 rounded-md border border-[#169976] text-white disabled:opacity-50 hover:bg-[#000000] transition"
         >
           Previous
         </button>
@@ -229,14 +261,14 @@ export default function QuizAnswerPage() {
         {currentIndex === quiz.questions.length - 1 ? (
           <button
             onClick={handleSubmit}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:opacity-90"
+            className="px-4 py-2 rounded-md bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
           >
             Submit
           </button>
         ) : (
           <button
             onClick={handleNext}
-            className="bg-purple-600 text-white px-4 py-2 rounded-md hover:opacity-90"
+            className="px-4 py-2 rounded-md bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
           >
             Next
           </button>
