@@ -2,6 +2,24 @@
 const Submission = require("../models/Submission");
 const Question = require("../models/Question"); // <-- required
 
+// NEW: quick probe so the UI can block a second attempt up front
+const hasUserSubmitted = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+    const exists = await Submission.exists({ quizId, userId });
+    return res.status(200).json({ submitted: !!exists });
+  } catch (err) {
+    console.error("hasUserSubmitted error:", err);
+    return res
+      .status(500)
+      .json({ message: "Probe failed", error: err.message });
+  }
+};
+
 const submitQuiz = async (req, res) => {
   try {
     const { quizId, userId, userEmail, answers } = req.body;
@@ -89,7 +107,6 @@ const getQuizSummary = async (req, res) => {
       });
     });
 
-    // handle empty questions safely
     if (questions.length === 0) {
       return res.json({
         totalSubmissions: submissions.length,
@@ -124,4 +141,26 @@ const getQuizSummary = async (req, res) => {
   }
 };
 
-module.exports = { submitQuiz, getQuizSubmissions, getQuizSummary };
+const deleteSubmission = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Submission.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Submission not found" });
+    }
+    return res.status(200).json({ message: "Submission deleted" });
+  } catch (err) {
+    console.error("deleteSubmission error:", err);
+    return res
+      .status(500)
+      .json({ message: "Delete failed", error: err.message });
+  }
+};
+
+module.exports = {
+  hasUserSubmitted,
+  submitQuiz,
+  getQuizSubmissions,
+  getQuizSummary,
+  deleteSubmission,
+};

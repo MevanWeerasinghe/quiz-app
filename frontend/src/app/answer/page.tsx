@@ -29,7 +29,6 @@ export default function AnswerLandingPage() {
       return;
     }
     setLoading(true);
-    // No intermediate modal — go directly to the quiz info/start page
     router.push(`/quiz/${id}`);
   };
 

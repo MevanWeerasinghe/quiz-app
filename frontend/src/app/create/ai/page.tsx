@@ -15,7 +15,11 @@ export default function AIGeneratePage() {
   const [loading, setLoading] = useState(false);
 
   const [quizTitle, setQuizTitle] = useState("");
-  const [timeLimit, setTimeLimit] = useState(5);
+  const [timingMode, setTimingMode] = useState<"whole-quiz" | "per-question">(
+    "whole-quiz"
+  );
+  const [timeLimit, setTimeLimit] = useState(5); // minutes (whole-quiz)
+  const [perQuestionTimeSec, setPerQuestionTimeSec] = useState(60); // seconds (per-question)
   const [allowBack, setAllowBack] = useState(true);
   const [showResult, setShowResult] = useState(true);
 
@@ -23,9 +27,7 @@ export default function AIGeneratePage() {
 
   const handleGenerate = async () => {
     if (!topic || !user) return alert("Please enter a topic and login");
-
     setLoading(true);
-
     try {
       const res = await fetch("http://localhost:5000/api/quizzes/generate-ai", {
         method: "POST",
@@ -56,10 +58,17 @@ export default function AIGeneratePage() {
     const payload = {
       title: quizTitle,
       creatorId: user.id,
-      timeLimit,
+      timingMode,
+      timeLimit: timingMode === "whole-quiz" ? timeLimit : 0,
+      perQuestionTimeSec:
+        timingMode === "per-question" ? perQuestionTimeSec : undefined,
       allowBack,
       showResult,
-      questions,
+      questions: questions.map((q) => ({
+        ...q,
+        questionTime:
+          timingMode === "per-question" ? perQuestionTimeSec : undefined,
+      })),
     };
 
     try {
@@ -140,6 +149,67 @@ export default function AIGeneratePage() {
           />
         </label>
 
+        {/* Timing Mode */}
+        <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
+          <span className="block font-medium text-white mb-2">Timing Mode</span>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label className="inline-flex items-center gap-2 text-white">
+              <input
+                type="radio"
+                name="timingMode"
+                value="whole-quiz"
+                checked={timingMode === "whole-quiz"}
+                onChange={() => setTimingMode("whole-quiz")}
+                className="accent-[#1DCD9F]"
+              />
+              Whole quiz time limit
+            </label>
+            <label className="inline-flex items-center gap-2 text-white">
+              <input
+                type="radio"
+                name="timingMode"
+                value="per-question"
+                checked={timingMode === "per-question"}
+                onChange={() => setTimingMode("per-question")}
+                className="accent-[#1DCD9F]"
+              />
+              Time per question
+            </label>
+          </div>
+
+          {timingMode === "whole-quiz" ? (
+            <div className="mt-4">
+              <label className="block font-medium text-white mb-1">
+                Time Limit (minutes)
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                value={timeLimit}
+                onChange={(e) =>
+                  setTimeLimit(parseInt(e.target.value || "0", 10))
+                }
+              />
+            </div>
+          ) : (
+            <div className="mt-4">
+              <label className="block font-medium text-white mb-1">
+                Time per Question (seconds)
+              </label>
+              <input
+                type="number"
+                min={5}
+                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                value={perQuestionTimeSec}
+                onChange={(e) =>
+                  setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
+                }
+              />
+            </div>
+          )}
+        </div>
+
         <button
           onClick={handleGenerate}
           className="bg-[#1DCD9F] text-[#000000] px-6 py-2 rounded font-medium hover:bg-[#169976] transition disabled:opacity-60 disabled:cursor-not-allowed"
@@ -171,17 +241,31 @@ export default function AIGeneratePage() {
           <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
               <label className="block font-medium text-white mb-1">
-                Time Limit (min)
+                {timingMode === "whole-quiz"
+                  ? "Time Limit (minutes)"
+                  : "Time per Question (seconds)"}
               </label>
-              <input
-                type="number"
-                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-                value={timeLimit}
-                onChange={(e) =>
-                  setTimeLimit(parseInt(e.target.value || "0", 10))
-                }
-                min={0}
-              />
+              {timingMode === "whole-quiz" ? (
+                <input
+                  type="number"
+                  className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                  value={timeLimit}
+                  onChange={(e) =>
+                    setTimeLimit(parseInt(e.target.value || "0", 10))
+                  }
+                  min={0}
+                />
+              ) : (
+                <input
+                  type="number"
+                  className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                  value={perQuestionTimeSec}
+                  onChange={(e) =>
+                    setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
+                  }
+                  min={5}
+                />
+              )}
             </div>
 
             <div className="border border-[#169976] rounded-lg p-4 bg-[#222222] flex gap-6 items-center">

@@ -8,6 +8,7 @@ type Question = {
   text: string;
   options: string[];
   correctIndex: number;
+  questionTime?: number; // seconds (used if timingMode === 'per-question')
 };
 
 type Quiz = {
@@ -15,7 +16,8 @@ type Quiz = {
   title: string;
   allowBack: boolean;
   showResult: boolean;
-  timeLimit: number;
+  timeLimit: number; // minutes (used if timingMode === 'whole-quiz')
+  timingMode: "whole-quiz" | "per-question";
   questions: Question[] | any[]; // tolerate ids briefly
 };
 
@@ -27,6 +29,9 @@ export default function QuizViewPage() {
   // metadata draft
   const [title, setTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState<number>(5);
+  const [timingMode, setTimingMode] = useState<"whole-quiz" | "per-question">(
+    "whole-quiz"
+  );
   const [allowBack, setAllowBack] = useState<boolean>(true);
   const [showResult, setShowResult] = useState<boolean>(true);
   const [savingMeta, setSavingMeta] = useState(false);
@@ -41,6 +46,7 @@ export default function QuizViewPage() {
       setQuiz(data);
       setTitle(data.title);
       setTimeLimit(data.timeLimit);
+      setTimingMode(data.timingMode || "whole-quiz");
       setAllowBack(data.allowBack);
       setShowResult(data.showResult);
     };
@@ -51,14 +57,26 @@ export default function QuizViewPage() {
     if (!quiz) return;
     setSavingMeta(true);
     try {
+      const body: any = { title, timingMode, allowBack, showResult };
+      // only send timeLimit when whole-quiz is selected
+      if (timingMode === "whole-quiz") {
+        body.timeLimit = timeLimit;
+      }
+
       const res = await fetch(`http://localhost:5000/api/quizzes/${quiz._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, timeLimit, allowBack, showResult }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to update quiz");
       const updated = await res.json();
       setQuiz(updated);
+      // sync local state with server
+      setTitle(updated.title);
+      setTimeLimit(updated.timeLimit);
+      setTimingMode(updated.timingMode);
+      setAllowBack(updated.allowBack);
+      setShowResult(updated.showResult);
       alert("Quiz updated");
     } catch (err) {
       console.error(err);
@@ -69,7 +87,13 @@ export default function QuizViewPage() {
   };
 
   const startEdit = (q: Question) => {
-    setEditing((prev) => ({ ...prev, [q._id]: { ...q } }));
+    setEditing((prev) => ({
+      ...prev,
+      [q._id]: {
+        ...q,
+        questionTime: typeof q.questionTime === "number" ? q.questionTime : 60, // default if undefined
+      },
+    }));
   };
 
   const cancelEdit = (questionId: string) => {
@@ -82,7 +106,7 @@ export default function QuizViewPage() {
 
   const changeDraft = (
     questionId: string,
-    field: "text" | "option" | "correctIndex",
+    field: "text" | "option" | "correctIndex" | "questionTime",
     value: string | number,
     optionIndex?: number
   ) => {
@@ -90,6 +114,7 @@ export default function QuizViewPage() {
       const draft = { ...(prev[questionId] as Question) };
       if (field === "text") draft.text = String(value);
       if (field === "correctIndex") draft.correctIndex = Number(value);
+      if (field === "questionTime") draft.questionTime = Number(value);
       if (field === "option" && typeof optionIndex === "number") {
         const opts = Array.isArray(draft.options) ? [...draft.options] : [];
         opts[optionIndex] = String(value);
@@ -109,18 +134,32 @@ export default function QuizViewPage() {
     if (draft.correctIndex < 0 || draft.correctIndex >= draft.options.length) {
       return alert("Correct option out of range");
     }
+    if (timingMode === "per-question") {
+      if (
+        typeof draft.questionTime !== "number" ||
+        isNaN(draft.questionTime) ||
+        draft.questionTime <= 0
+      ) {
+        return alert("Question time must be a positive number of seconds.");
+      }
+    }
 
     try {
+      const body: any = {
+        text: draft.text,
+        options: draft.options,
+        correctIndex: draft.correctIndex,
+      };
+      if (timingMode === "per-question") {
+        body.questionTime = Number(draft.questionTime);
+      }
+
       const res = await fetch(
         `http://localhost:5000/api/quizzes/questions/${questionId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: draft.text,
-            options: draft.options,
-            correctIndex: draft.correctIndex,
-          }),
+          body: JSON.stringify(body),
         }
       );
       if (!res.ok) throw new Error("Update failed");
@@ -154,7 +193,40 @@ export default function QuizViewPage() {
       <div className="border border-[#169976] rounded-lg p-4 bg-[#222222] mb-6">
         <h1 className="text-2xl font-bold mb-4 text-white">Edit Quiz</h1>
 
+        {/* Timing Mode */}
+        <div className="mb-4">
+          <span className="block text-sm font-medium mb-2 text-white">
+            Timing Mode
+          </span>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label className="inline-flex items-center gap-2 text-white">
+              <input
+                type="radio"
+                name="timingMode"
+                value="whole-quiz"
+                checked={timingMode === "whole-quiz"}
+                onChange={() => setTimingMode("whole-quiz")}
+                className="accent-[#1DCD9F]"
+              />
+              Whole quiz time limit
+            </label>
+            <label className="inline-flex items-center gap-2 text-white">
+              <input
+                type="radio"
+                name="timingMode"
+                value="per-question"
+                checked={timingMode === "per-question"}
+                onChange={() => setTimingMode("per-question")}
+                className="accent-[#1DCD9F]"
+              />
+              Time per question
+            </label>
+          </div>
+        </div>
+
+        {/* Keep a stable two-column grid; right cell shows either input or tip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Left: Title */}
           <label className="block">
             <span className="block text-sm font-medium mb-1 text-white">
               Title
@@ -167,22 +239,33 @@ export default function QuizViewPage() {
             />
           </label>
 
-          <label className="block">
-            <span className="block text-sm font-medium mb-1 text-white">
-              Time Limit (min)
-            </span>
-            <input
-              type="number"
-              className="border border-[#169976] rounded px-3 py-2 w-full bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-              value={timeLimit}
-              onChange={(e) =>
-                setTimeLimit(parseInt(e.target.value || "0", 10))
-              }
-              min={0}
-              placeholder="0 = No limit"
-            />
-          </label>
+          {/* Right: Time Limit input OR Tip (same grid cell) */}
+          <div>
+            {timingMode === "whole-quiz" ? (
+              <label className="block">
+                <span className="block text-sm font-medium mb-1 text-white">
+                  Time Limit (min)
+                </span>
+                <input
+                  type="number"
+                  className="border border-[#169976] rounded px-3 py-2 w-full bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                  value={timeLimit}
+                  onChange={(e) =>
+                    setTimeLimit(parseInt(e.target.value || "0", 10))
+                  }
+                  min={0}
+                  placeholder="0 = No limit"
+                />
+              </label>
+            ) : (
+              <p className="text-xs text-white/60 mt-6">
+                Tip: Edit the time (in seconds) for each question in the list
+                below.
+              </p>
+            )}
+          </div>
 
+          {/* Allow Back */}
           <label className="flex items-center gap-2 mt-1 text-white">
             <input
               type="checkbox"
@@ -193,6 +276,7 @@ export default function QuizViewPage() {
             Allow Back
           </label>
 
+          {/* Show Result */}
           <label className="flex items-center gap-2 mt-1 text-white">
             <input
               type="checkbox"
@@ -204,6 +288,7 @@ export default function QuizViewPage() {
           </label>
         </div>
 
+        {/* Save button (no tip below anymore) */}
         <button
           onClick={saveMetadata}
           className="mt-4 px-4 py-2 rounded bg-[#1DCD9F] text-[#000000] font-medium hover:bg-[#169976] transition disabled:opacity-60"
@@ -216,9 +301,19 @@ export default function QuizViewPage() {
       {/* Preview */}
       <h2 className="text-xl font-semibold mb-2 text-white">Questions</h2>
       <p className="text-white/70 mb-4">
-        Time: {quiz.timeLimit} min •{" "}
-        {quiz.allowBack ? "Back allowed" : "Back not allowed"} •{" "}
-        {quiz.showResult ? "Show result after submit" : "Result hidden"}
+        {timingMode === "whole-quiz" ? (
+          <>
+            Total Time: {quiz.timeLimit} min •{" "}
+            {quiz.allowBack ? "Back allowed" : "Back not allowed"} •{" "}
+            {quiz.showResult ? "Show result after submit" : "Result hidden"}
+          </>
+        ) : (
+          <>
+            Timing: per question •{" "}
+            {quiz.allowBack ? "Back allowed" : "Back not allowed"} •{" "}
+            {quiz.showResult ? "Show result after submit" : "Result hidden"}
+          </>
+        )}
       </p>
 
       <ol className="space-y-4">
@@ -278,6 +373,41 @@ export default function QuizViewPage() {
                   )}
                 </div>
               </div>
+
+              {/* per-question time (only visible when timingMode is per-question) */}
+              {timingMode === "per-question" && (
+                <div className="mt-3">
+                  {isEditing ? (
+                    <label className="block text-sm text-white mb-2">
+                      Time for this question (seconds)
+                      <input
+                        type="number"
+                        min={5}
+                        className="mt-1 border border-[#169976] rounded px-3 py-2 w-full sm:w-64 bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                        value={
+                          typeof draft?.questionTime === "number"
+                            ? draft.questionTime
+                            : 60
+                        }
+                        onChange={(e) =>
+                          changeDraft(
+                            questionId,
+                            "questionTime",
+                            parseInt(e.target.value || "0", 10)
+                          )
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <div className="text-sm text-white/80">
+                      Time:{" "}
+                      <span className="text-[#1DCD9F] font-medium">
+                        {base?.questionTime ?? 60}s
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <ul className="mt-3 space-y-2">
                 {(Array.isArray((show as any)?.options)

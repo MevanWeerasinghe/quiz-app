@@ -1,15 +1,15 @@
-// backend/controllers/quizController.js
 const Quiz = require("../models/Quiz");
 const Question = require("../models/Question");
 const { generateQuizWithGemini } = require("../utils/geminiApi");
 
-// Create a quiz (manual or AI)
+// Create a quiz (manual or AI) - (kept for completeness if used anywhere else)
 const createQuiz = async (req, res) => {
   try {
     const {
       title,
       creatorId,
-      timeLimit,
+      timingMode = "whole-quiz", // NEW
+      timeLimit = 0, // minutes
       allowBack,
       showResult,
       createdWithAI,
@@ -18,6 +18,7 @@ const createQuiz = async (req, res) => {
     const quiz = new Quiz({
       title,
       creator: creatorId,
+      timingMode,
       timeLimit,
       allowBack,
       showResult,
@@ -82,19 +83,24 @@ const deleteQuiz = async (req, res) => {
 const updateQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
-    const { title, timeLimit, allowBack, showResult } = req.body;
+    const {
+      title,
+      timingMode, // NEW (optional)
+      timeLimit, // minutes (only for whole-quiz)
+      allowBack,
+      showResult,
+    } = req.body;
 
-    const updated = await Quiz.findByIdAndUpdate(
-      quizId,
-      { title, timeLimit, allowBack, showResult },
-      { new: true }
-    );
+    const update = { title, allowBack, showResult };
+    if (timingMode) update.timingMode = timingMode;
+    if (typeof timeLimit === "number") update.timeLimit = timeLimit;
+
+    const updated = await Quiz.findByIdAndUpdate(quizId, update, { new: true });
 
     if (!updated) {
       return res.status(404).json({ message: "Quiz not found" });
     }
 
-    // Populate questions
     await updated.populate("questions");
     res.json(updated);
   } catch (err) {
@@ -102,7 +108,7 @@ const updateQuiz = async (req, res) => {
   }
 };
 
-// Generate a quiz using Gemini
+// Generate a quiz using Gemini (unchanged)
 const generateAIQuiz = async (req, res) => {
   const { topic, numQuestions, numOptions, promptInstructions } = req.body;
 
@@ -129,10 +135,9 @@ Instructions: ${
   const result = await generateQuizWithGemini(prompt);
 
   try {
-    // Strip Markdown code block if present
     const cleanResult = result
-      .replace(/^```json\s*/i, "") // remove starting ```json
-      .replace(/```$/, "") // remove ending ```
+      .replace(/^```json\s*/i, "")
+      .replace(/```$/, "")
       .trim();
 
     const parsed = JSON.parse(cleanResult);
@@ -144,21 +149,25 @@ Instructions: ${
   }
 };
 
+// Save a quiz with provided questions (used by both Manual and AI flows)
 const createAIQuizWithQuestions = async (req, res) => {
   try {
     const {
       title,
       creatorId,
-      timeLimit,
+      timingMode = "whole-quiz", // NEW
+      perQuestionTimeSec = 60, // NEW (used when timingMode === 'per-question')
+      timeLimit = 0, // minutes (used when whole-quiz)
       allowBack,
       showResult,
-      questions, // full array from Gemini
+      questions, // array of { text, options, correctIndex }
     } = req.body;
 
     // Step 1: Create quiz
     const quiz = new Quiz({
       title,
       creator: creatorId,
+      timingMode,
       timeLimit,
       allowBack,
       showResult,
@@ -166,7 +175,7 @@ const createAIQuizWithQuestions = async (req, res) => {
     });
     await quiz.save();
 
-    // Step 2: Create questions
+    // Step 2: Create questions with optional per-question time
     const questionDocs = await Promise.all(
       questions.map(async (q) => {
         const newQ = new Question({
@@ -174,13 +183,17 @@ const createAIQuizWithQuestions = async (req, res) => {
           text: q.text,
           options: q.options,
           correctIndex: q.correctIndex,
+          questionTime:
+            timingMode === "per-question"
+              ? Number(q.questionTime ?? perQuestionTimeSec)
+              : undefined,
         });
         await newQ.save();
         return newQ._id;
       })
     );
 
-    // Step 3: Update quiz with question IDs
+    // Step 3: attach question ids
     quiz.questions = questionDocs;
     await quiz.save();
 
@@ -188,7 +201,7 @@ const createAIQuizWithQuestions = async (req, res) => {
   } catch (err) {
     res
       .status(500)
-      .json({ message: "AI Quiz save failed", error: err.message });
+      .json({ message: "AI/Manual Quiz save failed", error: err.message });
   }
 };
 
@@ -205,7 +218,7 @@ const getQuizById = async (req, res) => {
 const updateQuestion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { text, options, correctIndex } = req.body;
+    const { text, options, correctIndex, questionTime } = req.body; // NEW: allow updating questionTime
 
     if (!Array.isArray(options) || options.length < 2 || options.length > 5) {
       return res.status(400).json({ message: "Options must be 2–5 items." });
@@ -214,11 +227,12 @@ const updateQuestion = async (req, res) => {
       return res.status(400).json({ message: "correctIndex out of range." });
     }
 
-    const updated = await Question.findByIdAndUpdate(
-      id,
-      { text, options, correctIndex },
-      { new: true }
-    );
+    const update = { text, options, correctIndex };
+    if (typeof questionTime === "number") {
+      update.questionTime = questionTime;
+    }
+
+    const updated = await Question.findByIdAndUpdate(id, update, { new: true });
     if (!updated) {
       return res.status(404).json({ message: "Question not found" });
     }
@@ -228,7 +242,6 @@ const updateQuestion = async (req, res) => {
   }
 };
 
-// Export all controller functions
 module.exports = {
   createQuiz,
   getUserQuizzes,

@@ -1,9 +1,11 @@
+// app/quiz/[quizId]/dashboard/page.tsx  (or your current path)
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
+import Popup from "@/components/Popup"; // <-- adjust import path if needed
 
 type AnswerRow = {
   questionId: {
@@ -50,48 +52,117 @@ export default function QuizDashboardPage() {
 
   const [openSubmission, setOpenSubmission] = useState<Submission | null>(null);
 
+  // POPUP state (for confirm delete, but reusable)
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupConfig, setPopupConfig] = useState<{
+    title?: string;
+    message?: React.ReactNode;
+    buttons?: {
+      label: string;
+      color?: "primary" | "danger" | "neutral";
+      onClick: () => void;
+      autoClose?: boolean;
+    }[];
+  }>({});
+
   const isOwner = useMemo(
     () => Boolean(user?.id && creator && user?.id === creator),
     [user?.id, creator]
   );
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setLoadErr(null);
-      try {
-        // Quiz head
-        const qRes = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
-        const qData: QuizHead = await qRes.json();
-        setTitle(qData?.title || "Quiz");
-        setCreator(qData?.creator || "");
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setLoadErr(null);
+    try {
+      // Quiz head
+      const qRes = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
+      const qData: QuizHead = await qRes.json();
+      setTitle(qData?.title || "Quiz");
+      setCreator(qData?.creator || "");
 
-        // Only owners can view submissions
-        if (user?.id && qData?.creator && user.id === qData.creator) {
-          const sRes = await fetch(
-            `http://localhost:5000/api/submissions/quiz/${quizId}`
-          );
-          const sData = await sRes.json();
-          setSubmissions(Array.isArray(sData) ? sData : []);
+      if (user?.id && qData?.creator && user.id === qData.creator) {
+        const sRes = await fetch(
+          `http://localhost:5000/api/submissions/quiz/${quizId}`
+        );
+        const sData = await sRes.json();
+        setSubmissions(Array.isArray(sData) ? sData : []);
 
-          const sumRes = await fetch(
-            `http://localhost:5000/api/submissions/quiz/${quizId}/summary`
-          );
-          const sumData = await sumRes.json();
-          setSummary(sumData);
-        } else {
-          setSubmissions([]);
-          setSummary(null);
-        }
-      } catch (e: any) {
-        console.error(e);
-        setLoadErr(e?.message || "Failed to load dashboard");
-      } finally {
-        setLoading(false);
+        const sumRes = await fetch(
+          `http://localhost:5000/api/submissions/quiz/${quizId}/summary`
+        );
+        const sumData = await sumRes.json();
+        setSummary(sumData);
+      } else {
+        setSubmissions([]);
+        setSummary(null);
       }
-    };
-    load();
+    } catch (e: any) {
+      console.error(e);
+      setLoadErr(e?.message || "Failed to load dashboard");
+    } finally {
+      setLoading(false);
+    }
   }, [quizId, user?.id]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const askDelete = (submission: Submission) => {
+    setPopupConfig({
+      title: "Delete Attempt?",
+      message: (
+        <div className="text-white/90">
+          This will remove{" "}
+          <span className="font-semibold">
+            {submission.userEmail || submission.userId}
+          </span>
+          ’s attempt and free them to retake the quiz.
+          <br />
+          <span className="text-white/70">
+            Submitted at {new Date(submission.submittedAt).toLocaleString()}
+          </span>
+        </div>
+      ),
+      buttons: [
+        {
+          label: "Cancel",
+          color: "neutral",
+          onClick: () => {},
+        },
+        {
+          label: "Delete",
+          color: "danger",
+          onClick: async () => {
+            try {
+              const resp = await fetch(
+                `http://localhost:5000/api/submissions/${submission._id}`,
+                { method: "DELETE" }
+              );
+              if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                throw new Error(data?.message || "Delete failed");
+              }
+              // refresh after delete
+              await fetchAll();
+            } catch (err) {
+              console.error(err);
+              // Optional: show an error popup
+              setPopupConfig({
+                title: "Delete failed",
+                message: "Something went wrong while deleting the attempt.",
+                buttons: [
+                  { label: "Close", color: "neutral", onClick: () => {} },
+                ],
+              });
+              setPopupOpen(true);
+            }
+          },
+        },
+      ],
+    });
+    setPopupOpen(true);
+  };
 
   if (loading)
     return (
@@ -208,12 +279,23 @@ export default function QuizDashboardPage() {
                   {s.score}
                 </td>
                 <td className="p-3 border-b border-[#169976]">
-                  <button
-                    className="px-3 py-2 rounded bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
-                    onClick={() => setOpenSubmission(s)}
-                  >
-                    View answers
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="px-3 py-2 rounded bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
+                      onClick={() => setOpenSubmission(s)}
+                    >
+                      View answers
+                    </button>
+
+                    {/* NEW: Delete attempt */}
+                    <button
+                      className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-500 transition"
+                      onClick={() => askDelete(s)}
+                      title="Delete this attempt"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -232,11 +314,11 @@ export default function QuizDashboardPage() {
       {openSubmission && (
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-          onClick={() => setOpenSubmission(null)} // close on outside click
+          onClick={() => setOpenSubmission(null)}
         >
           <div
             className="bg-[#222222] border border-[#169976] rounded-2xl shadow-xl w-full max-w-5xl max-h-[85vh] overflow-auto p-6 relative"
-            onClick={(e) => e.stopPropagation()} // prevent backdrop close on content click
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-5">
               <div>
@@ -279,14 +361,10 @@ export default function QuizDashboardPage() {
                       {q.options.map((opt: string, i: number) => {
                         const sel = a.selectedIndex === i;
                         const corr = q.correctIndex === i;
-                        let optionClass = "text-white/80"; // default style
-                        if (corr) {
-                          optionClass = "text-[#1DCD9F] font-semibold"; // correct answer → green
-                        }
-                        if (sel && !corr) {
-                          optionClass = "text-red-400 font-semibold"; // wrong choice → red
-                        }
-
+                        let optionClass = "text-white/80";
+                        if (corr) optionClass = "text-[#1DCD9F] font-semibold";
+                        if (sel && !corr)
+                          optionClass = "text-red-400 font-semibold";
                         return (
                           <li key={i} className={optionClass}>
                             {opt}
@@ -319,6 +397,16 @@ export default function QuizDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Reusable Popup */}
+      <Popup
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        title={popupConfig.title}
+        message={popupConfig.message}
+        buttons={popupConfig.buttons}
+        widthClass="max-w-lg w-full"
+      />
     </div>
   );
 }

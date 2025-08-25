@@ -9,7 +9,12 @@ export default function ManualCreatePage() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
-  const [timeLimit, setTimeLimit] = useState(5);
+  const [timingMode, setTimingMode] = useState<"whole-quiz" | "per-question">(
+    "whole-quiz"
+  );
+  const [timeLimit, setTimeLimit] = useState(5); // minutes for whole-quiz
+  const [perQuestionTimeSec, setPerQuestionTimeSec] = useState(60); // seconds for per-question
+
   const [allowBack, setAllowBack] = useState(true);
   const [showResult, setShowResult] = useState(true);
 
@@ -24,7 +29,7 @@ export default function ManualCreatePage() {
       const optionIndex = parseInt(field.slice(-1));
       newQuestions[index].options[optionIndex] = value;
     } else if (field === "correctIndex") {
-      newQuestions[index].correctIndex = parseInt(value);
+      newQuestions[index].correctIndex = parseInt(value, 10);
     }
     setQuestions(newQuestions);
   };
@@ -39,13 +44,22 @@ export default function ManualCreatePage() {
   const handleSubmit = async () => {
     if (!user) return alert("Please sign in first");
 
+    // When timingMode is per-question, we attach a uniform questionTime to each question
     const payload = {
       title,
       creatorId: user.id,
-      timeLimit,
+      timingMode,
+      timeLimit: timingMode === "whole-quiz" ? timeLimit : 0,
+      perQuestionTimeSec:
+        timingMode === "per-question" ? perQuestionTimeSec : undefined,
       allowBack,
       showResult,
-      questions,
+      questions: questions.map((q) => ({
+        ...q,
+        // backend will fill questionTime from perQuestionTimeSec; included here if you want explicit
+        questionTime:
+          timingMode === "per-question" ? perQuestionTimeSec : undefined,
+      })),
     };
 
     try {
@@ -57,7 +71,7 @@ export default function ManualCreatePage() {
 
       if (!res.ok) throw new Error("Quiz save failed");
 
-      const data = await res.json();
+      await res.json();
       alert("Quiz created!");
       router.push("/create");
     } catch (err) {
@@ -84,38 +98,95 @@ export default function ManualCreatePage() {
         />
       </div>
 
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block font-medium text-white mb-1">
-            Time Limit (min)
+      {/* Timing Mode */}
+      <div className="mb-4 border border-[#169976] rounded-lg p-4 bg-[#222222]">
+        <span className="block font-medium text-white mb-2">Timing Mode</span>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <label className="inline-flex items-center gap-2 text-white">
+            <input
+              type="radio"
+              name="timingMode"
+              value="whole-quiz"
+              checked={timingMode === "whole-quiz"}
+              onChange={() => setTimingMode("whole-quiz")}
+              className="accent-[#1DCD9F]"
+            />
+            Whole quiz time limit
           </label>
-          <input
-            type="number"
-            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-            value={timeLimit}
-            onChange={(e) => setTimeLimit(parseInt(e.target.value || "0", 10))}
-            min={0}
-          />
+          <label className="inline-flex items-center gap-2 text-white">
+            <input
+              type="radio"
+              name="timingMode"
+              value="per-question"
+              checked={timingMode === "per-question"}
+              onChange={() => setTimingMode("per-question")}
+              className="accent-[#1DCD9F]"
+            />
+            Time per question
+          </label>
         </div>
 
-        <div className="flex gap-6 items-center md:mt-7">
-          <label className="flex gap-2 items-center text-white">
+        {timingMode === "whole-quiz" ? (
+          <div className="mt-4">
+            <label className="block font-medium text-white mb-1">
+              Time Limit (minutes)
+            </label>
+            <input
+              type="number"
+              min={0}
+              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+              value={timeLimit}
+              onChange={(e) =>
+                setTimeLimit(parseInt(e.target.value || "0", 10))
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-4">
+            <label className="block font-medium text-white mb-1">
+              Time per Question (seconds)
+            </label>
+            <input
+              type="number"
+              min={5}
+              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+              value={perQuestionTimeSec}
+              onChange={(e) =>
+                setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
+              }
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
+          <label className="block font-medium text-white mb-1">
+            Allow Back
+          </label>
+          <label className="inline-flex gap-2 items-center text-white">
             <input
               type="checkbox"
               checked={allowBack}
               onChange={(e) => setAllowBack(e.target.checked)}
               className="accent-[#1DCD9F]"
             />
-            Allow Back
+            Enable back navigation between questions
           </label>
-          <label className="flex gap-2 items-center text-white">
+        </div>
+
+        <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
+          <label className="block font-medium text-white mb-1">
+            Show Result
+          </label>
+          <label className="inline-flex gap-2 items-center text-white">
             <input
               type="checkbox"
               checked={showResult}
               onChange={(e) => setShowResult(e.target.checked)}
               className="accent-[#1DCD9F]"
             />
-            Show Result
+            Show score after submission
           </label>
         </div>
       </div>

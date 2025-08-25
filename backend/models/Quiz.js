@@ -9,7 +9,16 @@ const quizSchema = new mongoose.Schema({
     required: true,
   },
   questions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Question" }],
-  timeLimit: { type: Number, required: true }, // in minutes
+
+  // If timingMode === 'whole-quiz' => timeLimit (in minutes) applies to entire quiz
+  // If timingMode === 'per-question' => each Question.questionTime (in seconds) applies to that question
+  timingMode: {
+    type: String,
+    enum: ["whole-quiz", "per-question"],
+    default: "whole-quiz",
+  },
+
+  timeLimit: { type: Number, required: true }, // in minutes (only relevant for whole-quiz)
   allowBack: { type: Boolean, required: true },
   showResult: { type: Boolean, required: true },
   createdWithAI: { type: Boolean, default: false },

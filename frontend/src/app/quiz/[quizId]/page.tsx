@@ -9,15 +9,17 @@ type Question = {
   text: string;
   options: string[];
   correctIndex: number;
+  questionTime?: number; // seconds (used when timingMode === 'per-question')
 };
 
 type Quiz = {
   _id: string;
   title: string;
   questions: Question[];
-  timeLimit: number; // minutes
+  timeLimit: number; // minutes (used when timingMode === 'whole-quiz')
   allowBack: boolean;
   showResult: boolean;
+  timingMode: "whole-quiz" | "per-question";
 };
 
 export default function QuizAnswerPage() {
@@ -36,6 +38,11 @@ export default function QuizAnswerPage() {
   const [score, setScore] = useState<number>(0);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
 
+  // NEW
+  const [alreadySubmitted, setAlreadySubmitted] = useState<boolean | null>(
+    null
+  );
+
   // Redirect loop fix: wait for Clerk to load
   useEffect(() => {
     if (!isLoaded) return;
@@ -46,36 +53,96 @@ export default function QuizAnswerPage() {
 
   // Fetch quiz after authenticated
   useEffect(() => {
-    const fetchQuiz = async () => {
+    const fetchQuizAndProbe = async () => {
       try {
         const res = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
         const data = await res.json();
-        setQuiz(data);
-        setAnswers(Array(data.questions.length).fill(null));
-        const seconds = (data.timeLimit || 0) * 60;
-        setTimeLeft(seconds);
+
+        const timingMode: "whole-quiz" | "per-question" =
+          data.timingMode || "whole-quiz";
+        const questions: Question[] = Array.isArray(data.questions)
+          ? data.questions.map((q: any) => ({
+              _id: q._id,
+              text: q.text,
+              options: q.options,
+              correctIndex: q.correctIndex,
+              questionTime:
+                typeof q.questionTime === "number" ? q.questionTime : 60,
+            }))
+          : [];
+
+        const normalized: Quiz = {
+          _id: data._id,
+          title: data.title,
+          questions,
+          timeLimit: data.timeLimit ?? 0,
+          allowBack: data.allowBack ?? true,
+          showResult: data.showResult ?? true,
+          timingMode,
+        };
+
+        setQuiz(normalized);
+        setAnswers(Array(questions.length).fill(null));
+
+        if (timingMode === "whole-quiz") {
+          setTimeLeft((normalized.timeLimit || 0) * 60);
+        } else {
+          const first = questions[0];
+          setTimeLeft(first?.questionTime ?? 60);
+        }
+
+        // --- NEW: probe if this user already submitted ---
+        if (user?.id) {
+          const probe = await fetch(
+            `http://localhost:5000/api/submissions/quiz/${quizId}/has-submitted?userId=${encodeURIComponent(
+              user.id
+            )}`
+          );
+          const payload = await probe.json();
+          setAlreadySubmitted(Boolean(payload?.submitted));
+        } else {
+          setAlreadySubmitted(false);
+        }
       } catch (err) {
-        console.error("Failed to fetch quiz:", err);
+        console.error("Failed to fetch quiz/probe:", err);
       }
     };
-    if (isLoaded && isSignedIn) fetchQuiz();
-  }, [quizId, isLoaded, isSignedIn]);
 
-  // Timer runs only after "Start"
+    if (isLoaded && isSignedIn) fetchQuizAndProbe();
+  }, [quizId, isLoaded, isSignedIn, user?.id]);
+
+  // Timer
   useEffect(() => {
     if (!started || !quiz || timeLeft <= 0 || isSubmitted) return;
+
     const t = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(t);
-          handleSubmit(); // auto submit
+          if (quiz.timingMode === "whole-quiz") {
+            handleSubmit(); // submit the whole quiz
+          } else {
+            const last = currentIndex >= quiz.questions.length - 1;
+            if (last) {
+              handleSubmit();
+            } else {
+              const nextIndex = currentIndex + 1;
+              setCurrentIndex(nextIndex);
+              const q = quiz.questions[nextIndex];
+              setTimeLeft(
+                typeof q?.questionTime === "number" ? q.questionTime! : 60
+              );
+            }
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(t);
-  }, [started, quiz, timeLeft, isSubmitted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, quiz, timeLeft, isSubmitted, currentIndex]);
 
   const question = quiz?.questions[currentIndex];
 
@@ -85,15 +152,29 @@ export default function QuizAnswerPage() {
     setAnswers(updated);
   };
 
+  const resetPerQuestionClock = (index: number) => {
+    if (!quiz || quiz.timingMode !== "per-question") return;
+    const q = quiz.questions[index];
+    setTimeLeft(typeof q?.questionTime === "number" ? q.questionTime! : 60);
+  };
+
   const handlePrev = () => {
     if (!quiz) return;
     if (!quiz.allowBack) return;
-    if (currentIndex > 0) setCurrentIndex((p) => p - 1);
+    if (currentIndex > 0) {
+      const next = currentIndex - 1;
+      setCurrentIndex(next);
+      resetPerQuestionClock(next);
+    }
   };
 
   const handleNext = () => {
     if (!quiz) return;
-    if (currentIndex < quiz.questions.length - 1) setCurrentIndex((p) => p + 1);
+    if (currentIndex < quiz.questions.length - 1) {
+      const next = currentIndex + 1;
+      setCurrentIndex(next);
+      resetPerQuestionClock(next);
+    }
   };
 
   const handleSubmit = async () => {
@@ -117,7 +198,14 @@ export default function QuizAnswerPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.message || "Submission failed");
+        // graceful handling for the one-attempt rule
+        if (res.status === 400 && data?.message) {
+          setSubmitErr(data.message);
+        } else {
+          setSubmitErr(data?.message || "Submission failed");
+        }
+        setIsSubmitted(true);
+        return;
       }
 
       setScore(data.score ?? 0);
@@ -125,7 +213,7 @@ export default function QuizAnswerPage() {
     } catch (err: any) {
       console.error(err);
       setSubmitErr(err.message || "Failed to submit quiz.");
-      setIsSubmitted(true); // still move to completion screen to avoid being stuck
+      setIsSubmitted(true);
     }
   };
 
@@ -135,7 +223,7 @@ export default function QuizAnswerPage() {
         Loading...
       </div>
     );
-  if (!isSignedIn) return null; // redirecting
+  if (!isSignedIn) return null;
   if (!quiz)
     return (
       <div className="p-6 text-white bg-[#000000] min-h-[calc(100vh-64px)]">
@@ -143,31 +231,61 @@ export default function QuizAnswerPage() {
       </div>
     );
 
-  // Start modal (shown before answering)
+  // Start screen (now blocks if already submitted)
   if (!started && !isSubmitted) {
+    const blocked = alreadySubmitted === true;
     return (
       <div className="max-w-2xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
         <div className="border border-[#169976] bg-[#222222] rounded-lg p-6">
           <h1 className="text-3xl font-bold mb-2 text-white">{quiz.title}</h1>
-          <ul className="text-white/80 mb-6">
-            <li>Questions: {quiz.questions.length}</li>
-            <li>Time limit: {quiz.timeLimit} min</li>
-            <li>{quiz.allowBack ? "Back allowed" : "Back not allowed"}</li>
-            <li>
-              {quiz.showResult ? "Result shown after submit" : "Result hidden"}
-            </li>
-          </ul>
-          <button
-            onClick={() => setStarted(true)}
-            className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded font-medium hover:bg-[#169976] transition"
-          >
-            Start Quiz
-          </button>
+
+          {blocked ? (
+            <>
+              <p className="text-white/90 mb-4">
+                You’ve already completed this quiz. Your answers have been
+                saved.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => router.push(`/`)}
+                  className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded font-medium hover:bg-[#169976] transition"
+                >
+                  Go to Home
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <ul className="text-white/80 mb-6">
+                <li>Questions: {quiz.questions.length}</li>
+                {quiz.timingMode === "whole-quiz" ? (
+                  <li>Time limit: {quiz.timeLimit} min (whole quiz)</li>
+                ) : (
+                  <li>
+                    Timing: per question (each question has its own timer)
+                  </li>
+                )}
+                <li>{quiz.allowBack ? "Back allowed" : "Back not allowed"}</li>
+                <li>
+                  {quiz.showResult
+                    ? "Result shown after submit"
+                    : "Result hidden"}
+                </li>
+              </ul>
+              <button
+                onClick={() => setStarted(true)}
+                className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded font-medium hover:bg-[#169976] transition"
+              >
+                Start Quiz
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
+  // Completion screen
   if (isSubmitted) {
     return (
       <div className="max-w-2xl mx-auto p-6 text-center bg-[#000000] min-h-[calc(100vh-64px)]">
@@ -189,8 +307,6 @@ export default function QuizAnswerPage() {
               {submitErr}
             </p>
           )}
-
-          {/* Only navigate to Home for respondents. Dashboard is creator-only. */}
           <div className="mt-6">
             <button
               onClick={() => router.push(`/`)}
@@ -204,20 +320,23 @@ export default function QuizAnswerPage() {
     );
   }
 
+  // In-quiz UI
   return (
     <div className="max-w-3xl mx-auto p-6 bg-[#000000] min-h-[calc(100vh-64px)]">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-white">{quiz.title}</h1>
-        {quiz.timeLimit > 0 && (
-          <div className="text-lg font-semibold text-white">
-            Time Left:{" "}
-            <span className="text-[#1DCD9F]">
-              {Math.floor(timeLeft / 60)}:
-              {String(timeLeft % 60).padStart(2, "0")}
+        <div className="text-lg font-semibold text-white">
+          Time Left:{" "}
+          <span className="text-[#1DCD9F]">
+            {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+          {quiz.timingMode === "per-question" && (
+            <span className="text-white/60 text-sm ml-2">
+              (Q{currentIndex + 1})
             </span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Question Card */}
