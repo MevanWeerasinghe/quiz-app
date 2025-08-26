@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
+import Popup from "@/components/Popup"; // adjust if needed
 
 interface Quiz {
   _id: string;
@@ -16,8 +17,23 @@ export default function CreateQuizPage() {
   const [origin, setOrigin] = useState<string>("");
   const [search, setSearch] = useState("");
 
+  // popup state
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupCfg, setPopupCfg] = useState<{
+    title?: string;
+    message?: React.ReactNode;
+    buttons?: {
+      label: string;
+      color?: "primary" | "danger" | "neutral";
+      onClick: () => void;
+      autoClose?: boolean;
+    }[];
+  }>({});
+
+  // track copied state per quiz id
+  const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    // capture current origin for link building (window is client-only)
     if (typeof window !== "undefined") {
       setOrigin(window.location.origin);
     }
@@ -37,32 +53,67 @@ export default function CreateQuizPage() {
     }
   }, [user, search]);
 
-  // Initial load
   useEffect(() => {
     fetchQuizzes();
   }, [fetchQuizzes]);
 
-  const handleCopy = async (text: string) => {
+  const handleCopy = async (quizId: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      alert("Link copied!");
+      setCopiedMap((prev) => ({ ...prev, [quizId]: true }));
+      // reset after 2 sec
+      setTimeout(() => {
+        setCopiedMap((prev) => {
+          const cp = { ...prev };
+          delete cp[quizId];
+          return cp;
+        });
+      }, 2 * 1000);
     } catch {
-      alert("Failed to copy link");
+      console.error("Failed to copy link");
     }
   };
 
-  const handleDelete = async (quizId: string) => {
-    if (!confirm("Are you sure you want to delete this quiz?")) return;
-    try {
-      const res = await fetch(`http://localhost:5000/api/quizzes/${quizId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete");
-      setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
-    } catch (err) {
-      console.error(err);
-      alert("Delete failed");
-    }
+  // confirm deletion popup
+  const confirmDelete = (quizId: string, quizTitle: string) => {
+    setPopupCfg({
+      title: "Delete Quiz?",
+      message: (
+        <div className="text-white/90">
+          You are about to delete{" "}
+          <span className="font-semibold">{quizTitle}</span>. This will remove
+          the quiz and its questions.
+        </div>
+      ),
+      buttons: [
+        { label: "Cancel", color: "neutral", onClick: () => {} },
+        {
+          label: "Delete",
+          color: "danger",
+          onClick: async () => {
+            try {
+              const res = await fetch(
+                `http://localhost:5000/api/quizzes/${quizId}`,
+                { method: "DELETE" }
+              );
+              if (!res.ok) throw new Error("Failed to delete");
+              setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
+            } catch (err) {
+              console.error(err);
+              setPopupCfg({
+                title: "Delete failed",
+                message: "Something went wrong while deleting the quiz.",
+                buttons: [
+                  { label: "Close", color: "neutral", onClick: () => {} },
+                ],
+              });
+              setPopupOpen(true);
+            }
+          },
+        },
+      ],
+    });
+    setPopupOpen(true);
   };
 
   return (
@@ -96,7 +147,7 @@ export default function CreateQuizPage() {
 
       <h2 className="text-2xl font-bold mb-4 text-white">Your Quizzes</h2>
 
-      {/* Search bar (live) */}
+      {/* Search bar */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-grow">
           <input
@@ -130,6 +181,7 @@ export default function CreateQuizPage() {
             const quizUrl = origin
               ? `${origin}/quiz/${quiz._id}`
               : `/quiz/${quiz._id}`;
+            const isCopied = copiedMap[quiz._id];
             return (
               <li
                 key={quiz._id}
@@ -145,7 +197,6 @@ export default function CreateQuizPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* View should open the preview+edit page */}
                     <Link
                       href={`/quiz/${quiz._id}/view`}
                       className="px-3 py-2 text-sm rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#000000] transition"
@@ -153,7 +204,6 @@ export default function CreateQuizPage() {
                       View
                     </Link>
 
-                    {/* Open should go to dashboard (submissions/stats) */}
                     <Link
                       href={`/quiz/${quiz._id}/dashboard`}
                       className="px-3 py-2 text-sm rounded bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
@@ -162,8 +212,8 @@ export default function CreateQuizPage() {
                     </Link>
 
                     <button
-                      onClick={() => handleDelete(quiz._id)}
-                      className="px-3 py-2 text-sm rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#000000] transition"
+                      onClick={() => confirmDelete(quiz._id, quiz.title)}
+                      className="px-3 py-2 text-sm rounded border border-red-500 text-red-500 hover:bg-[#000000] transition"
                       title="Delete quiz"
                     >
                       Delete
@@ -179,10 +229,21 @@ export default function CreateQuizPage() {
                     readOnly
                   />
                   <button
-                    onClick={() => handleCopy(quizUrl)}
-                    className="px-3 py-2 text-sm rounded bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition"
+                    onClick={() => !isCopied && handleCopy(quiz._id, quizUrl)}
+                    disabled={isCopied}
+                    className={`px-3 py-2 text-sm rounded bg-[#1DCD9F] text-[#000000] transition flex items-center justify-center ${
+                      isCopied
+                        ? "opacity-70 cursor-not-allowed"
+                        : "hover:bg-[#169976]"
+                    }`}
+                    aria-label="Copy link"
+                    title="Copy link"
                   >
-                    Copy Link
+                    <img
+                      src={isCopied ? "/copied.png" : "/copy-link.png"}
+                      alt={isCopied ? "Copied" : "Copy"}
+                      className="w-5 h-5"
+                    />
                   </button>
                 </div>
               </li>
@@ -190,6 +251,15 @@ export default function CreateQuizPage() {
           })}
         </ul>
       )}
+
+      <Popup
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        title={popupCfg.title}
+        message={popupCfg.message}
+        buttons={popupCfg.buttons}
+        widthClass="max-w-md w-full"
+      />
     </div>
   );
 }
