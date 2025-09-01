@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +24,14 @@ export default function AIGeneratePage() {
   const [showResult, setShowResult] = useState(true);
 
   const [questions, setQuestions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (timingMode === "per-question") {
+      setAllowBack(false);
+    } else if (timingMode === "whole-quiz") {
+      setAllowBack(true);
+    }
+  }, [timingMode, setAllowBack]);
 
   const handleGenerate = async () => {
     if (!topic || !user) return alert("Please enter a topic and login");
@@ -238,54 +246,40 @@ export default function AIGeneratePage() {
             />
           </div>
 
-          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
               <label className="block font-medium text-white mb-1">
-                {timingMode === "whole-quiz"
-                  ? "Time Limit (minutes)"
-                  : "Time per Question (seconds)"}
+                Allow Back
               </label>
-              {timingMode === "whole-quiz" ? (
-                <input
-                  type="number"
-                  className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-                  value={timeLimit}
-                  onChange={(e) =>
-                    setTimeLimit(parseInt(e.target.value || "0", 10))
-                  }
-                  min={0}
-                />
+              {timingMode === "per-question" ? (
+                <span className="text-s text-white/50 leading-tight">
+                  Allow Back is not allowed in this time mode
+                </span>
               ) : (
-                <input
-                  type="number"
-                  className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-                  value={perQuestionTimeSec}
-                  onChange={(e) =>
-                    setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
-                  }
-                  min={5}
-                />
+                <label className="inline-flex gap-2 items-center text-white">
+                  <input
+                    type="checkbox"
+                    checked={allowBack}
+                    onChange={(e) => setAllowBack(e.target.checked)}
+                    className="accent-[#1DCD9F]"
+                  />
+                  Enable back navigation between questions
+                </label>
               )}
             </div>
 
-            <div className="border border-[#169976] rounded-lg p-4 bg-[#222222] flex gap-6 items-center">
-              <label className="flex gap-2 items-center text-white">
-                <input
-                  type="checkbox"
-                  checked={allowBack}
-                  onChange={(e) => setAllowBack(e.target.checked)}
-                  className="accent-[#1DCD9F]"
-                />
-                Allow Back
+            <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
+              <label className="block font-medium text-white mb-1">
+                Show Result
               </label>
-              <label className="flex gap-2 items-center text-white">
+              <label className="inline-flex gap-2 items-center text-white">
                 <input
                   type="checkbox"
                   checked={showResult}
                   onChange={(e) => setShowResult(e.target.checked)}
                   className="accent-[#1DCD9F]"
                 />
-                Show Result
+                Show score after submission
               </label>
             </div>
           </div>

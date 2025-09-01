@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +21,14 @@ export default function ManualCreatePage() {
   const [questions, setQuestions] = useState([
     { text: "", options: ["", "", "", ""], correctIndex: 0 },
   ]);
+
+  useEffect(() => {
+    if (timingMode === "per-question") {
+      setAllowBack(false);
+    } else if (timingMode === "whole-quiz") {
+      setAllowBack(true);
+    }
+  }, [timingMode, setAllowBack]);
 
   const handleQuestionChange = (index: number, field: string, value: any) => {
     const newQuestions = [...questions];
@@ -164,15 +172,21 @@ export default function ManualCreatePage() {
           <label className="block font-medium text-white mb-1">
             Allow Back
           </label>
-          <label className="inline-flex gap-2 items-center text-white">
-            <input
-              type="checkbox"
-              checked={allowBack}
-              onChange={(e) => setAllowBack(e.target.checked)}
-              className="accent-[#1DCD9F]"
-            />
-            Enable back navigation between questions
-          </label>
+          {timingMode === "per-question" ? (
+            <span className="text-s text-white/50 leading-tight">
+              Allow Back is not allowed in this time mode
+            </span>
+          ) : (
+            <label className="inline-flex gap-2 items-center text-white">
+              <input
+                type="checkbox"
+                checked={allowBack}
+                onChange={(e) => setAllowBack(e.target.checked)}
+                className="accent-[#1DCD9F]"
+              />
+              Enable back navigation between questions
+            </label>
+          )}
         </div>
 
         <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">

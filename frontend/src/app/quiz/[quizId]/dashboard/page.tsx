@@ -1,4 +1,4 @@
-// app/quiz/[quizId]/dashboard/page.tsx  (or your current path)
+// app/quiz/[quizId]/dashboard/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -287,7 +287,7 @@ export default function QuizDashboardPage() {
                       View answers
                     </button>
 
-                    {/* NEW: Delete attempt */}
+                    {/* Delete attempt */}
                     <button
                       className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-500 transition"
                       onClick={() => askDelete(s)}
@@ -349,6 +349,12 @@ export default function QuizDashboardPage() {
                 const isCorrect =
                   typeof a.selectedIndex === "number" &&
                   a.selectedIndex === q.correctIndex;
+
+                // NEW: unanswered tag logic
+                const isUnanswered =
+                  typeof a.selectedIndex !== "number" ||
+                  a.selectedIndex === null;
+
                 return (
                   <div
                     key={idx}
@@ -356,6 +362,12 @@ export default function QuizDashboardPage() {
                   >
                     <div className="font-medium mb-2 text-white">
                       {idx + 1}. {q.text}
+                      {/* NEW blue tag when unanswered */}
+                      {isUnanswered && (
+                        <span className="ml-2 text-sky-400 font-semibold">
+                          (unanswered)
+                        </span>
+                      )}
                     </div>
                     <ul className="ml-5 list-disc">
                       {q.options.map((opt: string, i: number) => {

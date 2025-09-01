@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 
@@ -38,10 +38,13 @@ export default function QuizAnswerPage() {
   const [score, setScore] = useState<number>(0);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
 
-  // NEW
+  // block second attempt at start screen
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean | null>(
     null
   );
+
+  // ---- NEW: re-entrancy guard to prevent double submit on timeout ----
+  const submittingRef = useRef(false);
 
   // Redirect loop fix: wait for Clerk to load
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function QuizAnswerPage() {
     }
   }, [isLoaded, isSignedIn, quizId, redirectToSignIn]);
 
-  // Fetch quiz after authenticated
+  // Fetch quiz after authenticated (+ probe one-attempt)
   useEffect(() => {
     const fetchQuizAndProbe = async () => {
       try {
@@ -91,7 +94,7 @@ export default function QuizAnswerPage() {
           setTimeLeft(first?.questionTime ?? 60);
         }
 
-        // --- NEW: probe if this user already submitted ---
+        // probe if this user already submitted
         if (user?.id) {
           const probe = await fetch(
             `http://localhost:5000/api/submissions/quiz/${quizId}/has-submitted?userId=${encodeURIComponent(
@@ -111,6 +114,58 @@ export default function QuizAnswerPage() {
     if (isLoaded && isSignedIn) fetchQuizAndProbe();
   }, [quizId, isLoaded, isSignedIn, user?.id]);
 
+  // ---- NEW: single-safe submit function (guards against double submit) ----
+  const safeSubmit = useCallback(
+    async (reason: "manual" | "timeout") => {
+      if (!quiz || !user) return;
+      if (isSubmitted || submittingRef.current) return;
+
+      // prevent any further submissions immediately
+      submittingRef.current = true;
+      setIsSubmitted(true);
+      setSubmitErr(null);
+
+      try {
+        const payload = {
+          quizId: quiz._id,
+          userId: user.id,
+          userEmail: user.emailAddresses?.[0]?.emailAddress,
+          answers: quiz.questions.map((q, idx) => ({
+            questionId: q._id,
+            selectedIndex: answers[idx],
+          })),
+        };
+
+        const res = await fetch("http://localhost:5000/api/submissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          // graceful handling for one-attempt rule or other errors
+          if (res.status === 400 && data?.message) {
+            setSubmitErr(data.message);
+          } else {
+            setSubmitErr(data?.message || "Submission failed");
+          }
+          return;
+        }
+
+        setScore(data.score ?? 0);
+      } catch (err: any) {
+        console.error(err);
+        setSubmitErr(err.message || "Failed to submit quiz.");
+      } finally {
+        // keep isSubmitted = true; just unlock the ref to avoid blocking future navigations if needed
+        submittingRef.current = false;
+      }
+    },
+    [quiz, user, answers, isSubmitted]
+  );
+
   // Timer
   useEffect(() => {
     if (!started || !quiz || timeLeft <= 0 || isSubmitted) return;
@@ -119,12 +174,13 @@ export default function QuizAnswerPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(t);
+          // On timeout, submit only once via the guarded function
           if (quiz.timingMode === "whole-quiz") {
-            handleSubmit(); // submit the whole quiz
+            safeSubmit("timeout");
           } else {
             const last = currentIndex >= quiz.questions.length - 1;
             if (last) {
-              handleSubmit();
+              safeSubmit("timeout");
             } else {
               const nextIndex = currentIndex + 1;
               setCurrentIndex(nextIndex);
@@ -141,8 +197,7 @@ export default function QuizAnswerPage() {
     }, 1000);
 
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started, quiz, timeLeft, isSubmitted, currentIndex]);
+  }, [started, quiz, timeLeft, isSubmitted, currentIndex, safeSubmit]);
 
   const question = quiz?.questions[currentIndex];
 
@@ -177,45 +232,8 @@ export default function QuizAnswerPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!quiz || !user || isSubmitted) return;
-    setSubmitErr(null);
-    try {
-      const payload = {
-        quizId: quiz._id,
-        userId: user.id, // Clerk id string
-        userEmail: user.emailAddresses?.[0]?.emailAddress,
-        answers: quiz.questions.map((q, idx) => ({
-          questionId: q._id,
-          selectedIndex: answers[idx], // number | null
-        })),
-      };
-      const res = await fetch("http://localhost:5000/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        // graceful handling for the one-attempt rule
-        if (res.status === 400 && data?.message) {
-          setSubmitErr(data.message);
-        } else {
-          setSubmitErr(data?.message || "Submission failed");
-        }
-        setIsSubmitted(true);
-        return;
-      }
-
-      setScore(data.score ?? 0);
-      setIsSubmitted(true);
-    } catch (err: any) {
-      console.error(err);
-      setSubmitErr(err.message || "Failed to submit quiz.");
-      setIsSubmitted(true);
-    }
-  };
+  // manual submit uses the same guarded function
+  const handleSubmit = () => safeSubmit("manual");
 
   if (!isLoaded)
     return (
@@ -231,7 +249,7 @@ export default function QuizAnswerPage() {
       </div>
     );
 
-  // Start screen (now blocks if already submitted)
+  // Start screen (blocks if already submitted)
   if (!started && !isSubmitted) {
     const blocked = alreadySubmitted === true;
     return (

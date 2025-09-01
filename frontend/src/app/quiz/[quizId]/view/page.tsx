@@ -53,6 +53,14 @@ export default function QuizViewPage() {
     load();
   }, [quizId]);
 
+  useEffect(() => {
+    if (timingMode === "per-question") {
+      setAllowBack(false);
+    } else if (timingMode === "whole-quiz") {
+      setAllowBack(true);
+    }
+  }, [timingMode, setAllowBack]);
+
   const saveMetadata = async () => {
     if (!quiz) return;
     setSavingMeta(true);
@@ -266,15 +274,21 @@ export default function QuizViewPage() {
           </div>
 
           {/* Allow Back */}
-          <label className="flex items-center gap-2 mt-1 text-white">
-            <input
-              type="checkbox"
-              checked={allowBack}
-              onChange={(e) => setAllowBack(e.target.checked)}
-              className="accent-[#1DCD9F]"
-            />
-            Allow Back
-          </label>
+          {timingMode === "per-question" ? (
+            <span className="text-s text-white/50 leading-tight mt-1">
+              Allow Back is not allowed in this time mode
+            </span>
+          ) : (
+            <label className="flex items-center gap-2 mt-1 text-white">
+              <input
+                type="checkbox"
+                checked={allowBack}
+                onChange={(e) => setAllowBack(e.target.checked)}
+                className="accent-[#1DCD9F]"
+              />
+              Allow Back
+            </label>
+          )}
 
           {/* Show Result */}
           <label className="flex items-center gap-2 mt-1 text-white">
@@ -303,15 +317,15 @@ export default function QuizViewPage() {
       <p className="text-white/70 mb-4">
         {timingMode === "whole-quiz" ? (
           <>
-            Total Time: {quiz.timeLimit} min •{" "}
-            {quiz.allowBack ? "Back allowed" : "Back not allowed"} •{" "}
-            {quiz.showResult ? "Show result after submit" : "Result hidden"}
+            Total Time: {timeLimit} min •{" "}
+            {allowBack ? "Back allowed" : "Back not allowed"} •{" "}
+            {showResult ? "Show result after submit" : "Result hidden"}
           </>
         ) : (
           <>
             Timing: per question •{" "}
-            {quiz.allowBack ? "Back allowed" : "Back not allowed"} •{" "}
-            {quiz.showResult ? "Show result after submit" : "Result hidden"}
+            {allowBack ? "Back allowed" : "Back not allowed"} •{" "}
+            {showResult ? "Show result after submit" : "Result hidden"}
           </>
         )}
       </p>

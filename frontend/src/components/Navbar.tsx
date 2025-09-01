@@ -31,6 +31,12 @@ export default function Navbar() {
 
         <SignedIn>
           <Link
+            href="/my-quizzes"
+            className="text-white/90 hover:text-white transition-colors font-medium"
+          >
+            My Quizzes
+          </Link>
+          <Link
             href="/create"
             className="text-white/90 hover:text-white transition-colors font-medium"
           >
