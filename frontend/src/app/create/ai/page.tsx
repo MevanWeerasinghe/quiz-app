@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import Popup from "@/components/Popup";
 
 export default function AIGeneratePage() {
   const { user } = useUser();
@@ -24,6 +25,13 @@ export default function AIGeneratePage() {
   const [showResult, setShowResult] = useState(true);
 
   const [questions, setQuestions] = useState<any[]>([]);
+
+  // Popup states
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupMessage, setPopupMessage] = useState<string | React.ReactNode>(
+    ""
+  );
+  const [successOpen, setSuccessOpen] = useState(false);
 
   useEffect(() => {
     if (timingMode === "per-question") {
@@ -61,7 +69,21 @@ export default function AIGeneratePage() {
   };
 
   const handleSave = async () => {
-    if (!quizTitle || questions.length === 0 || !user) return;
+    if (!user) {
+      setPopupMessage("Please sign in first");
+      setPopupOpen(true);
+      return;
+    }
+    if (!quizTitle) {
+      setPopupMessage("Title is required");
+      setPopupOpen(true);
+      return;
+    }
+    if (questions.length === 1) {
+      setPopupMessage("Add at least two question");
+      setPopupOpen(true);
+      return;
+    }
 
     const payload = {
       title: quizTitle,
@@ -87,8 +109,7 @@ export default function AIGeneratePage() {
       });
 
       if (!res.ok) throw new Error("Failed to save quiz");
-      alert("Quiz saved!");
-      router.push("/create");
+      setSuccessOpen(true);
     } catch (err) {
       console.error(err);
       alert("Failed to save quiz");
@@ -319,6 +340,37 @@ export default function AIGeneratePage() {
           </button>
         </>
       )}
+      <Popup
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        title="Notice"
+        message={popupMessage}
+        buttons={[
+          {
+            label: "OK",
+            color: "primary",
+            onClick: () => {},
+            autoClose: true,
+          },
+        ]}
+      />
+      <Popup
+        open={successOpen}
+        onClose={() => {
+          setSuccessOpen(false);
+          router.push("/my-quizzes");
+        }}
+        title="Success"
+        message="Quiz created successfully!"
+        buttons={[
+          {
+            label: "OK",
+            color: "primary",
+            onClick: () => {},
+            autoClose: true,
+          },
+        ]}
+      />
     </div>
   );
 }

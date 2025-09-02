@@ -65,11 +65,13 @@ export default function QuizDashboardPage() {
     }[];
   }>({});
 
+  // Check if current user is the quiz owner
   const isOwner = useMemo(
     () => Boolean(user?.id && creator && user?.id === creator),
     [user?.id, creator]
   );
 
+  // Fetch quiz data and user submissions
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setLoadErr(null);
@@ -108,6 +110,32 @@ export default function QuizDashboardPage() {
     fetchAll();
   }, [fetchAll]);
 
+  // Delete submission
+  const deleteSubmission = async (submissionId: string) => {
+    try {
+      const resp = await fetch(
+        `http://localhost:5000/api/submissions/${submissionId}`,
+        { method: "DELETE" }
+      );
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data?.message || "Delete failed");
+      }
+      // refresh after delete
+      await fetchAll();
+    } catch (err) {
+      console.error(err);
+      // Optional: show an error popup
+      setPopupConfig({
+        title: "Delete failed",
+        message: "Something went wrong while deleting the attempt.",
+        buttons: [{ label: "Close", color: "neutral", onClick: () => {} }],
+      });
+      setPopupOpen(true);
+    }
+  };
+
+  // Ask for delete confirmation
   const askDelete = (submission: Submission) => {
     setPopupConfig({
       title: "Delete Attempt?",
@@ -133,31 +161,7 @@ export default function QuizDashboardPage() {
         {
           label: "Delete",
           color: "danger",
-          onClick: async () => {
-            try {
-              const resp = await fetch(
-                `http://localhost:5000/api/submissions/${submission._id}`,
-                { method: "DELETE" }
-              );
-              if (!resp.ok) {
-                const data = await resp.json().catch(() => ({}));
-                throw new Error(data?.message || "Delete failed");
-              }
-              // refresh after delete
-              await fetchAll();
-            } catch (err) {
-              console.error(err);
-              // Optional: show an error popup
-              setPopupConfig({
-                title: "Delete failed",
-                message: "Something went wrong while deleting the attempt.",
-                buttons: [
-                  { label: "Close", color: "neutral", onClick: () => {} },
-                ],
-              });
-              setPopupOpen(true);
-            }
-          },
+          onClick: () => deleteSubmission(submission._id),
         },
       ],
     });
@@ -197,6 +201,19 @@ export default function QuizDashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">{title} — Dashboard</h1>
         <div className="flex gap-2">
+          <button
+            onClick={fetchAll}
+            className="px-3 py-2 rounded border border-[#169976] text-white hover:bg-[#000000] transition flex flex-col items-center leading-tight"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <img
+              src="/refresh.png"
+              alt="Refresh"
+              className="w-4 h-4"
+              style={{ filter: "invert(1)" }}
+            />
+          </button>
           <Link
             href={`/quiz/${quizId}`}
             className="px-3 py-2 rounded bg-[#1DCD9F] text-[#000000] hover:bg-[#169976] transition text-sm font-medium"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import Popup from "@/components/Popup";
 
 export default function ManualCreatePage() {
   const { user } = useUser();
@@ -22,6 +23,14 @@ export default function ManualCreatePage() {
     { text: "", options: ["", "", "", ""], correctIndex: 0 },
   ]);
 
+  // Popup states
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupMessage, setPopupMessage] = useState<string | React.ReactNode>(
+    ""
+  );
+  const [successOpen, setSuccessOpen] = useState(false);
+
+  // Effect to manage back navigation based on timing mode
   useEffect(() => {
     if (timingMode === "per-question") {
       setAllowBack(false);
@@ -30,6 +39,7 @@ export default function ManualCreatePage() {
     }
   }, [timingMode, setAllowBack]);
 
+  // Handle question changes
   const handleQuestionChange = (index: number, field: string, value: any) => {
     const newQuestions = [...questions];
     if (field === "text") newQuestions[index].text = value;
@@ -42,6 +52,7 @@ export default function ManualCreatePage() {
     setQuestions(newQuestions);
   };
 
+  // Add a new question
   const addQuestion = () => {
     setQuestions([
       ...questions,
@@ -49,8 +60,41 @@ export default function ManualCreatePage() {
     ]);
   };
 
+  // Remove a question
+  const removeQuestion = () => {
+    if (questions.length > 1) {
+      setQuestions(questions.slice(0, -1));
+    }
+  };
+
+  // Handle form submission
   const handleSubmit = async () => {
-    if (!user) return alert("Please sign in first");
+    if (!user) {
+      setPopupMessage("Please sign in first");
+      setPopupOpen(true);
+      return;
+    }
+    if (!title) {
+      setPopupMessage("Title is required");
+      setPopupOpen(true);
+      return;
+    }
+    if (questions.length === 1) {
+      setPopupMessage("Add at least two question");
+      setPopupOpen(true);
+      return;
+    }
+
+    const hasEmpty = questions.some(
+      (q) => !q.text.trim() || q.options.some((opt) => !opt.trim())
+    );
+    if (hasEmpty) {
+      setPopupMessage(
+        "Please fill all question texts and options, or remove empty slots before saving."
+      );
+      setPopupOpen(true);
+      return;
+    }
 
     // When timingMode is per-question, we attach a uniform questionTime to each question
     const payload = {
@@ -80,11 +124,11 @@ export default function ManualCreatePage() {
       if (!res.ok) throw new Error("Quiz save failed");
 
       await res.json();
-      alert("Quiz created!");
-      router.push("/create");
+      setSuccessOpen(true);
     } catch (err) {
       console.error(err);
-      alert("Failed to create quiz");
+      setPopupMessage("Failed to create quiz");
+      setPopupOpen(true);
     }
   };
 
@@ -258,12 +302,25 @@ export default function ManualCreatePage() {
       ))}
 
       <button
-        className="mb-6 px-4 py-2 rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#000000] transition"
+        className="mb-6 px-4 py-2 rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#023b24] transition"
         onClick={addQuestion}
       >
         + Add Question
       </button>
-
+      <button
+        className={`mb-6 ml-4 px-4 py-2 rounded border transition
+        border-red-400 text-red-400 hover:bg-[#330000]
+         ${
+           questions.length <= 1
+             ? "text-gray-400 border-gray-500 cursor-not-allowed"
+             : ""
+         }
+       `}
+        onClick={removeQuestion}
+        disabled={questions.length <= 1}
+      >
+        − Remove Question
+      </button>
       <div>
         <button
           className="bg-[#1DCD9F] text-[#000000] py-3 px-6 rounded text-lg hover:bg-[#169976] transition"
@@ -272,6 +329,37 @@ export default function ManualCreatePage() {
           Save Quiz
         </button>
       </div>
+      <Popup
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        title="Notice"
+        message={popupMessage}
+        buttons={[
+          {
+            label: "OK",
+            color: "primary",
+            onClick: () => {},
+            autoClose: true,
+          },
+        ]}
+      />
+      <Popup
+        open={successOpen}
+        onClose={() => {
+          setSuccessOpen(false);
+          router.push("/my-quizzes");
+        }}
+        title="Success"
+        message="Quiz created successfully!"
+        buttons={[
+          {
+            label: "OK",
+            color: "primary",
+            onClick: () => {},
+            autoClose: true,
+          },
+        ]}
+      />
     </div>
   );
 }
