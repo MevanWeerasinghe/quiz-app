@@ -9,10 +9,23 @@ const submissionRoutes = require("./routes/submissionRoutes");
 
 const app = express();
 
+// Allowed origins for CORS
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL, // Your Vercel frontend URL
+];
+
 // Middlewares
 app.use(
   cors({
-    origin: "http://localhost:3000", // allow only your frontend
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
