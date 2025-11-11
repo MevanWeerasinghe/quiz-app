@@ -12,6 +12,7 @@ const app = express();
 // Allowed origins for CORS
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://quizappfe.vercel.app",
   process.env.FRONTEND_URL, // Your Vercel frontend URL
 ];
 
