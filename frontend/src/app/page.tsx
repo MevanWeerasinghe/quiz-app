@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
+import { API_URL } from "@/lib/api";
 
 export default function Home() {
   const { user } = useUser();
@@ -12,7 +13,7 @@ export default function Home() {
     const syncUserToBackend = async () => {
       if (!user) return;
       try {
-        await fetch("http://localhost:5000/api/users/auth", {
+        await fetch(`${API_URL}/api/users/auth`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

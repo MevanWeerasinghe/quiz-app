@@ -4,6 +4,14 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Popup from "@/components/Popup";
+import { API_URL } from "@/lib/api";
+
+type Question = {
+  text: string;
+  options: string[];
+  correctIndex: number;
+  questionTime?: number;
+};
 
 export default function AIGeneratePage() {
   const { user } = useUser();
@@ -24,7 +32,7 @@ export default function AIGeneratePage() {
   const [allowBack, setAllowBack] = useState(true);
   const [showResult, setShowResult] = useState(true);
 
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   // Popup states
   const [popupOpen, setPopupOpen] = useState(false);
@@ -45,7 +53,7 @@ export default function AIGeneratePage() {
     if (!topic || !user) return alert("Please enter a topic and login");
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/quizzes/generate-ai", {
+      const res = await fetch(`${API_URL}/api/quizzes/generate-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -102,7 +110,7 @@ export default function AIGeneratePage() {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/quizzes/save-ai", {
+      const res = await fetch(`${API_URL}/api/quizzes/save-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

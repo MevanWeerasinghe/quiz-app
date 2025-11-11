@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import Popup from "@/components/Popup";
+import { API_URL } from "@/lib/api";
 
 type Quiz = {
   _id: string;
@@ -46,9 +47,7 @@ export default function QuizList({
     if (!user) return;
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : "";
-      const res = await fetch(
-        `http://localhost:5000/api/quizzes/user/${user.id}${query}`
-      );
+      const res = await fetch(`${API_URL}/api/quizzes/user/${user.id}${query}`);
       const data = await res.json();
       setQuizzes(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -93,10 +92,9 @@ export default function QuizList({
           color: "danger",
           onClick: async () => {
             try {
-              const res = await fetch(
-                `http://localhost:5000/api/quizzes/${quizId}`,
-                { method: "DELETE" }
-              );
+              const res = await fetch(`${API_URL}/api/quizzes/${quizId}`, {
+                method: "DELETE",
+              });
               if (!res.ok) throw new Error("Failed to delete");
               setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
             } catch (err) {

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import Popup from "@/components/Popup";
+import { API_URL } from "@/lib/api";
 
 type Question = {
   _id: string;
@@ -60,11 +61,11 @@ export default function QuizAnswerPage() {
   useEffect(() => {
     const fetchQuizAndProbe = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
+        const res = await fetch(`${API_URL}/api/quizzes/${quizId}`);
         const data = await res.json();
 
         const questions: Question[] = Array.isArray(data.questions)
-          ? data.questions.map((q: any) => ({
+          ? data.questions.map((q: Question & { _id: string }) => ({
               _id: q._id,
               text: q.text,
               options: q.options,
@@ -95,7 +96,7 @@ export default function QuizAnswerPage() {
 
         if (user?.id) {
           const probe = await fetch(
-            `http://localhost:5000/api/submissions/quiz/${quizId}/has-submitted?userId=${encodeURIComponent(
+            `${API_URL}/api/submissions/quiz/${quizId}/has-submitted?userId=${encodeURIComponent(
               user.id
             )}`
           );
@@ -131,7 +132,7 @@ export default function QuizAnswerPage() {
       const blob = new Blob([JSON.stringify(payload)], {
         type: "application/json",
       });
-      navigator.sendBeacon("http://localhost:5000/api/submissions", blob);
+      navigator.sendBeacon(`${API_URL}/api/submissions`, blob);
     } catch (e) {
       console.error("beacon submit failed:", e);
     }
@@ -154,7 +155,7 @@ export default function QuizAnswerPage() {
           try {
             const payload = buildPayload();
             if (payload) {
-              await fetch("http://localhost:5000/api/submissions", {
+              await fetch(`${API_URL}/api/submissions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -174,7 +175,7 @@ export default function QuizAnswerPage() {
         const payload = buildPayload();
         if (!payload) return;
 
-        const res = await fetch("http://localhost:5000/api/submissions", {
+        const res = await fetch(`${API_URL}/api/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -187,8 +188,9 @@ export default function QuizAnswerPage() {
         }
 
         setScore(data.score ?? 0);
-      } catch (err: any) {
-        setSubmitErr(err.message || "Failed to submit quiz.");
+      } catch (err) {
+        const error = err as Error;
+        setSubmitErr(error.message || "Failed to submit quiz.");
       } finally {
         submittingRef.current = false;
       }

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import Popup from "@/components/Popup"; // <-- adjust import path if needed
+import { API_URL } from "@/lib/api";
 
 type AnswerRow = {
   questionId: {
@@ -77,20 +78,18 @@ export default function QuizDashboardPage() {
     setLoadErr(null);
     try {
       // Quiz head
-      const qRes = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
+      const qRes = await fetch(`${API_URL}/api/quizzes/${quizId}`);
       const qData: QuizHead = await qRes.json();
       setTitle(qData?.title || "Quiz");
       setCreator(qData?.creator || "");
 
       if (user?.id && qData?.creator && user.id === qData.creator) {
-        const sRes = await fetch(
-          `http://localhost:5000/api/submissions/quiz/${quizId}`
-        );
+        const sRes = await fetch(`${API_URL}/api/submissions/quiz/${quizId}`);
         const sData = await sRes.json();
         setSubmissions(Array.isArray(sData) ? sData : []);
 
         const sumRes = await fetch(
-          `http://localhost:5000/api/submissions/quiz/${quizId}/summary`
+          `${API_URL}/api/submissions/quiz/${quizId}/summary`
         );
         const sumData = await sumRes.json();
         setSummary(sumData);
@@ -98,9 +97,10 @@ export default function QuizDashboardPage() {
         setSubmissions([]);
         setSummary(null);
       }
-    } catch (e: any) {
+    } catch (e) {
+      const error = e as Error;
       console.error(e);
-      setLoadErr(e?.message || "Failed to load dashboard");
+      setLoadErr(error?.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -113,10 +113,9 @@ export default function QuizDashboardPage() {
   // Delete submission
   const deleteSubmission = async (submissionId: string) => {
     try {
-      const resp = await fetch(
-        `http://localhost:5000/api/submissions/${submissionId}`,
-        { method: "DELETE" }
-      );
+      const resp = await fetch(`${API_URL}/api/submissions/${submissionId}`, {
+        method: "DELETE",
+      });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
         throw new Error(data?.message || "Delete failed");

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { API_URL } from "@/lib/api";
 
 type Question = {
   _id: string;
@@ -18,7 +19,7 @@ type Quiz = {
   showResult: boolean;
   timeLimit: number; // minutes (used if timingMode === 'whole-quiz')
   timingMode: "whole-quiz" | "per-question";
-  questions: Question[] | any[]; // tolerate ids briefly
+  questions: Question[];
 };
 
 export default function QuizViewPage() {
@@ -41,7 +42,7 @@ export default function QuizViewPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch(`http://localhost:5000/api/quizzes/${quizId}`);
+      const res = await fetch(`${API_URL}/api/quizzes/${quizId}`);
       const data = await res.json();
       setQuiz(data);
       setTitle(data.title);
@@ -65,13 +66,18 @@ export default function QuizViewPage() {
     if (!quiz) return;
     setSavingMeta(true);
     try {
-      const body: any = { title, timingMode, allowBack, showResult };
+      const body: Record<string, string | number | boolean> = {
+        title,
+        timingMode,
+        allowBack,
+        showResult,
+      };
       // only send timeLimit when whole-quiz is selected
       if (timingMode === "whole-quiz") {
         body.timeLimit = timeLimit;
       }
 
-      const res = await fetch(`http://localhost:5000/api/quizzes/${quiz._id}`, {
+      const res = await fetch(`${API_URL}/api/quizzes/${quiz._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -153,7 +159,7 @@ export default function QuizViewPage() {
     }
 
     try {
-      const body: any = {
+      const body: Record<string, string | string[] | number> = {
         text: draft.text,
         options: draft.options,
         correctIndex: draft.correctIndex,
@@ -163,7 +169,7 @@ export default function QuizViewPage() {
       }
 
       const res = await fetch(
-        `http://localhost:5000/api/quizzes/questions/${questionId}`,
+        `${API_URL}/api/quizzes/questions/${questionId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -175,7 +181,7 @@ export default function QuizViewPage() {
 
       setQuiz((prev) => {
         if (!prev) return prev;
-        const updatedQs = (prev.questions || []).map((q: any) =>
+        const updatedQs = (prev.questions || []).map((q) =>
           (q?._id || String(q)) === questionId ? { ...q, ...updated } : q
         );
         return { ...prev, questions: updatedQs } as Quiz;
@@ -331,13 +337,13 @@ export default function QuizViewPage() {
       </p>
 
       <ol className="space-y-4">
-        {(quiz.questions || []).map((q: any, idx: number) => {
+        {(quiz.questions || []).map((q, idx: number) => {
           // If backend accidentally returned ids, skip rendering until refresh
-          const base: any = typeof q === "object" ? q : null;
+          const base = typeof q === "object" ? q : null;
           const questionId = base?._id || String(q);
           const draft = editing[questionId];
           const isEditing = Boolean(draft);
-          const show: Question | null = (draft || base) as any;
+          const show: Question | null = (draft || base) as Question | null;
 
           return (
             <li
@@ -424,63 +430,62 @@ export default function QuizViewPage() {
               )}
 
               <ul className="mt-3 space-y-2">
-                {(Array.isArray((show as any)?.options)
-                  ? (show as any).options
-                  : []
-                ).map((opt: string, i: number) => {
-                  const isCorrect = (show as any)?.correctIndex === i;
-                  return (
-                    <li key={i}>
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            className="border border-[#169976] rounded px-3 py-2 w-full bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-                            value={opt}
-                            onChange={(e) =>
-                              changeDraft(
-                                questionId,
-                                "option",
-                                e.target.value,
-                                i
-                              )
-                            }
-                            placeholder={`Option ${i + 1}`}
-                          />
-                          <label className="flex items-center gap-2 text-sm text-white">
+                {(Array.isArray(show?.options) ? show.options : []).map(
+                  (opt: string, i: number) => {
+                    const isCorrect = show?.correctIndex === i;
+                    return (
+                      <li key={i}>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
                             <input
-                              type="radio"
-                              name={`correct-${questionId}`}
-                              checked={(show as any)?.correctIndex === i}
-                              onChange={() =>
-                                changeDraft(questionId, "correctIndex", i)
+                              className="border border-[#169976] rounded px-3 py-2 w-full bg-[#000000] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                              value={opt}
+                              onChange={(e) =>
+                                changeDraft(
+                                  questionId,
+                                  "option",
+                                  e.target.value,
+                                  i
+                                )
                               }
-                              className="accent-[#1DCD9F]"
+                              placeholder={`Option ${i + 1}`}
                             />
-                            Correct
-                          </label>
-                        </div>
-                      ) : (
-                        <div
-                          className={`px-3 py-2 border rounded ${
-                            isCorrect
-                              ? "bg-[#000000] border-[#1DCD9F] text-white"
-                              : "bg-[#000000] border-[#169976] text-white/90"
-                          }`}
-                        >
-                          {opt}{" "}
-                          {isCorrect && (
-                            <span className="text-[#1DCD9F] font-semibold">
-                              (correct)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
+                            <label className="flex items-center gap-2 text-sm text-white">
+                              <input
+                                type="radio"
+                                name={`correct-${questionId}`}
+                                checked={show?.correctIndex === i}
+                                onChange={() =>
+                                  changeDraft(questionId, "correctIndex", i)
+                                }
+                                className="accent-[#1DCD9F]"
+                              />
+                              Correct
+                            </label>
+                          </div>
+                        ) : (
+                          <div
+                            className={`px-3 py-2 border rounded ${
+                              isCorrect
+                                ? "bg-[#000000] border-[#1DCD9F] text-white"
+                                : "bg-[#000000] border-[#169976] text-white/90"
+                            }`}
+                          >
+                            {opt}{" "}
+                            {isCorrect && (
+                              <span className="text-[#1DCD9F] font-semibold">
+                                (correct)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  }
+                )}
               </ul>
 
-              {!Array.isArray((show as any)?.options) && (
+              {!Array.isArray(show?.options) && (
                 <div className="text-sm text-white/60 mt-2">
                   Loading question details…
                 </div>

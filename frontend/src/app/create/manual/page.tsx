@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Popup from "@/components/Popup";
+import { API_URL } from "@/lib/api";
+
+type Question = {
+  text: string;
+  options: string[];
+  correctIndex: number;
+};
 
 export default function ManualCreatePage() {
   const { user } = useUser();
@@ -19,7 +26,7 @@ export default function ManualCreatePage() {
   const [allowBack, setAllowBack] = useState(true);
   const [showResult, setShowResult] = useState(true);
 
-  const [questions, setQuestions] = useState([
+  const [questions, setQuestions] = useState<Question[]>([
     { text: "", options: ["", "", "", ""], correctIndex: 0 },
   ]);
 
@@ -40,7 +47,11 @@ export default function ManualCreatePage() {
   }, [timingMode, setAllowBack]);
 
   // Handle question changes
-  const handleQuestionChange = (index: number, field: string, value: any) => {
+  const handleQuestionChange = (
+    index: number,
+    field: string,
+    value: string
+  ) => {
     const newQuestions = [...questions];
     if (field === "text") newQuestions[index].text = value;
     else if (field.startsWith("option")) {
@@ -115,7 +126,7 @@ export default function ManualCreatePage() {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/quizzes/save-ai", {
+      const res = await fetch(`${API_URL}/api/quizzes/save-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
