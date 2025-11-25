@@ -5,6 +5,15 @@ import { useEffect } from "react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Sparkles, BookOpen } from "lucide-react";
 
 export default function Home() {
   const { user } = useUser();
@@ -34,41 +43,78 @@ export default function Home() {
   }, [user]);
 
   return (
-    <main className="min-h-[calc(100vh-64px)] p-10 text-center bg-[#000000]">
-      <h1 className="text-4xl font-bold mb-4 text-white">
-        Welcome to the Quiz App
-      </h1>
-
-      <p className="mb-10 text-[#cfcfcf]">
-        Create quizzes. Share them. Let others answer.
-      </p>
-
-      <SignedIn>
-        <div className="flex justify-center gap-6">
-          <Link href="/create">
-            <button
-              className="bg-[#1DCD9F] text-[#000000] px-6 py-3 rounded-md font-medium hover:bg-[#169976] transition-colors"
-              aria-label="Go to Quiz Builder"
-            >
-              Go to Quiz Builder
-            </button>
-          </Link>
-          <Link href="/answer">
-            <button
-              className="border border-[#1DCD9F] text-[#1DCD9F] px-6 py-3 rounded-md font-medium hover:bg-[#222222] transition-colors"
-              aria-label="Go to Answer Quiz"
-            >
-              Go to Answer Quiz
-            </button>
-          </Link>
+    <main className="min-h-[calc(100vh-64px)] bg-[#000000] flex items-center justify-center p-6">
+      <div className="max-w-4xl w-full space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
+            Welcome to <span className="text-[#1DCD9F]">Quiz App</span>
+          </h1>
+          <p className="text-xl text-white/70 max-w-2xl mx-auto">
+            Create engaging quizzes, share them with the world, and challenge
+            others to test their knowledge.
+          </p>
         </div>
-      </SignedIn>
 
-      <SignedOut>
-        <p className="text-[#b5b5b5]">
-          Please sign in to create or answer quizzes.
-        </p>
-      </SignedOut>
+        <SignedIn>
+          <div className="grid md:grid-cols-2 gap-6 mt-12">
+            <Card className="hover:border-[#1DCD9F] transition-colors">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#1DCD9F]/10">
+                    <Sparkles className="w-6 h-6 text-[#1DCD9F]" />
+                  </div>
+                  <CardTitle>Create Quizzes</CardTitle>
+                </div>
+                <CardDescription>
+                  Build custom quizzes with AI assistance or manually. Perfect
+                  for education, training, or fun.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/create">
+                  <Button className="w-full" size="lg">
+                    Go to Quiz Builder
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-[#1DCD9F] transition-colors">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#1DCD9F]/10">
+                    <BookOpen className="w-6 h-6 text-[#1DCD9F]" />
+                  </div>
+                  <CardTitle>Answer Quizzes</CardTitle>
+                </div>
+                <CardDescription>
+                  Test your knowledge by answering quizzes created by the
+                  community.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/answer">
+                  <Button variant="outline" className="w-full" size="lg">
+                    Go to Answer Quiz
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </SignedIn>
+
+        <SignedOut>
+          <Card className="max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="text-center">Get Started</CardTitle>
+              <CardDescription className="text-center">
+                Please sign in to create or answer quizzes and join our learning
+                community.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </SignedOut>
+      </div>
     </main>
   );
 }

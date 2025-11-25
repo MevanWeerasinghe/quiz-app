@@ -5,6 +5,18 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Popup from "@/components/Popup";
 import { API_URL } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Minus, Save } from "lucide-react";
 
 type Question = {
   text: string;
@@ -144,202 +156,236 @@ export default function ManualCreatePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
-      <h1 className="text-2xl font-bold mb-6 text-white">
-        Manual Quiz Creator
-      </h1>
-
-      {/* Quiz meta */}
-      <div className="mb-4">
-        <label className="block font-medium text-white mb-1">Quiz Title</label>
-        <input
-          type="text"
-          className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Enter a descriptive title…"
-        />
+    <div className="max-w-4xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 text-white">
+          Manual Quiz Creator
+        </h1>
+        <p className="text-white/70">
+          Build your quiz question by question with full control
+        </p>
       </div>
 
-      {/* Timing Mode */}
-      <div className="mb-4 border border-[#169976] rounded-lg p-4 bg-[#222222]">
-        <span className="block font-medium text-white mb-2">Timing Mode</span>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <label className="inline-flex items-center gap-2 text-white">
-            <input
-              type="radio"
-              name="timingMode"
-              value="whole-quiz"
-              checked={timingMode === "whole-quiz"}
-              onChange={() => setTimingMode("whole-quiz")}
-              className="accent-[#1DCD9F]"
-            />
-            Whole quiz time limit
-          </label>
-          <label className="inline-flex items-center gap-2 text-white">
-            <input
-              type="radio"
-              name="timingMode"
-              value="per-question"
-              checked={timingMode === "per-question"}
-              onChange={() => setTimingMode("per-question")}
-              className="accent-[#1DCD9F]"
-            />
-            Time per question
-          </label>
-        </div>
-
-        {timingMode === "whole-quiz" ? (
-          <div className="mt-4">
-            <label className="block font-medium text-white mb-1">
-              Time Limit (minutes)
-            </label>
-            <input
-              type="number"
-              min={0}
-              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-              value={timeLimit}
-              onChange={(e) =>
-                setTimeLimit(parseInt(e.target.value || "0", 10))
-              }
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Quiz Settings</CardTitle>
+          <CardDescription>
+            Configure your quiz details and timing
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Quiz Title */}
+          <div className="space-y-2">
+            <label className="block font-medium text-white">Quiz Title</label>
+            <Input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter a descriptive title…"
             />
           </div>
-        ) : (
-          <div className="mt-4">
-            <label className="block font-medium text-white mb-1">
-              Time per Question (seconds)
-            </label>
-            <input
-              type="number"
-              min={5}
-              className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-              value={perQuestionTimeSec}
-              onChange={(e) =>
-                setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
-              }
-            />
+
+          {/* Timing Mode */}
+          <div className="space-y-4">
+            <label className="block font-medium text-white">Timing Mode</label>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <label className="inline-flex items-center gap-2 text-white cursor-pointer">
+                <input
+                  type="radio"
+                  name="timingMode"
+                  value="whole-quiz"
+                  checked={timingMode === "whole-quiz"}
+                  onChange={() => setTimingMode("whole-quiz")}
+                  className="accent-[#1DCD9F]"
+                />
+                Whole quiz time limit
+              </label>
+              <label className="inline-flex items-center gap-2 text-white cursor-pointer">
+                <input
+                  type="radio"
+                  name="timingMode"
+                  value="per-question"
+                  checked={timingMode === "per-question"}
+                  onChange={() => setTimingMode("per-question")}
+                  className="accent-[#1DCD9F]"
+                />
+                Time per question
+              </label>
+            </div>
+
+            {timingMode === "whole-quiz" ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-white">
+                  Time Limit (minutes)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={timeLimit}
+                  onChange={(e) =>
+                    setTimeLimit(parseInt(e.target.value || "0", 10))
+                  }
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-white">
+                  Time per Question (seconds)
+                </label>
+                <Input
+                  type="number"
+                  min={5}
+                  value={perQuestionTimeSec}
+                  onChange={(e) =>
+                    setPerQuestionTimeSec(parseInt(e.target.value || "0", 10))
+                  }
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
-          <label className="block font-medium text-white mb-1">
-            Allow Back
-          </label>
-          {timingMode === "per-question" ? (
-            <span className="text-s text-white/50 leading-tight">
-              Allow Back is not allowed in this time mode
-            </span>
-          ) : (
-            <label className="inline-flex gap-2 items-center text-white">
-              <input
-                type="checkbox"
-                checked={allowBack}
-                onChange={(e) => setAllowBack(e.target.checked)}
-                className="accent-[#1DCD9F]"
-              />
-              Enable back navigation between questions
-            </label>
-          )}
+          <Separator />
+
+          {/* Allow Back and Show Result */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block font-medium text-white">Allow Back</label>
+              {timingMode === "per-question" ? (
+                <p className="text-sm text-white/50">
+                  Not allowed in per-question timing mode
+                </p>
+              ) : (
+                <label className="inline-flex gap-2 items-center text-white cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowBack}
+                    onChange={(e) => setAllowBack(e.target.checked)}
+                    className="accent-[#1DCD9F]"
+                  />
+                  <span className="text-sm">
+                    Enable back navigation between questions
+                  </span>
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block font-medium text-white">
+                Show Result
+              </label>
+              <label className="inline-flex gap-2 items-center text-white cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showResult}
+                  onChange={(e) => setShowResult(e.target.checked)}
+                  className="accent-[#1DCD9F]"
+                />
+                <span className="text-sm">Show score after submission</span>
+              </label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Questions Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">Questions</h2>
+            <p className="text-sm text-white/70 mt-1">
+              Add and configure your quiz questions
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-lg px-3 py-1">
+            {questions.length}{" "}
+            {questions.length === 1 ? "Question" : "Questions"}
+          </Badge>
         </div>
 
-        <div className="border border-[#169976] rounded-lg p-4 bg-[#222222]">
-          <label className="block font-medium text-white mb-1">
-            Show Result
-          </label>
-          <label className="inline-flex gap-2 items-center text-white">
-            <input
-              type="checkbox"
-              checked={showResult}
-              onChange={(e) => setShowResult(e.target.checked)}
-              className="accent-[#1DCD9F]"
-            />
-            Show score after submission
-          </label>
+        <div className="space-y-4">
+          {questions.map((q, idx) => (
+            <Card key={idx}>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1DCD9F]/10 text-[#1DCD9F] text-sm font-bold">
+                    {idx + 1}
+                  </span>
+                  Question {idx + 1}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  type="text"
+                  placeholder="Enter question text"
+                  value={q.text}
+                  onChange={(e) =>
+                    handleQuestionChange(idx, "text", e.target.value)
+                  }
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {q.options.map((opt, i) => (
+                    <Input
+                      key={i}
+                      type="text"
+                      placeholder={`Option ${i + 1}`}
+                      value={opt}
+                      onChange={(e) =>
+                        handleQuestionChange(idx, `option${i}`, e.target.value)
+                      }
+                    />
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-white">
+                    Correct Option
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-[#169976] bg-[#000000] px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
+                    value={q.correctIndex}
+                    onChange={(e) =>
+                      handleQuestionChange(idx, "correctIndex", e.target.value)
+                    }
+                  >
+                    {q.options.map((_, i) => (
+                      <option key={i} value={i}>
+                        Option {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-white">Questions</h2>
-
-      {questions.map((q, idx) => (
-        <div
-          key={idx}
-          className="mb-6 border border-[#169976] rounded p-4 bg-[#222222]"
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <Button onClick={addQuestion} variant="outline" className="gap-2">
+          <Plus className="w-4 h-4" />
+          Add Question
+        </Button>
+        <Button
+          onClick={removeQuestion}
+          disabled={questions.length <= 1}
+          variant="destructive"
+          className="gap-2"
         >
-          <label className="block font-medium mb-2 text-white">
-            Question {idx + 1}
-          </label>
-          <input
-            type="text"
-            className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 w-full rounded mb-3 focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-            placeholder="Question text"
-            value={q.text}
-            onChange={(e) => handleQuestionChange(idx, "text", e.target.value)}
-          />
+          <Minus className="w-4 h-4" />
+          Remove Question
+        </Button>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-            {q.options.map((opt, i) => (
-              <input
-                key={i}
-                type="text"
-                className="border border-[#169976] bg-[#000000] text-white placeholder-white/50 p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-                placeholder={`Option ${i + 1}`}
-                value={opt}
-                onChange={(e) =>
-                  handleQuestionChange(idx, `option${i}`, e.target.value)
-                }
-              />
-            ))}
-          </div>
-
-          <label className="block font-medium text-white mb-1">
-            Correct Option
-          </label>
-          <select
-            className="border border-[#169976] bg-[#000000] text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#1DCD9F]"
-            value={q.correctIndex}
-            onChange={(e) =>
-              handleQuestionChange(idx, "correctIndex", e.target.value)
-            }
-          >
-            {q.options.map((_, i) => (
-              <option key={i} value={i}>
-                Option {i + 1}
-              </option>
-            ))}
-          </select>
-        </div>
-      ))}
-
-      <button
-        className="mb-6 px-4 py-2 rounded border border-[#1DCD9F] text-[#1DCD9F] hover:bg-[#023b24] transition"
-        onClick={addQuestion}
-      >
-        + Add Question
-      </button>
-      <button
-        className={`mb-6 ml-4 px-4 py-2 rounded border transition
-        border-red-400 text-red-400 hover:bg-[#330000]
-         ${
-           questions.length <= 1
-             ? "text-gray-400 border-gray-500 cursor-not-allowed"
-             : ""
-         }
-       `}
-        onClick={removeQuestion}
-        disabled={questions.length <= 1}
-      >
-        − Remove Question
-      </button>
-      <div>
-        <button
-          className="bg-[#1DCD9F] text-[#000000] py-3 px-6 rounded text-lg hover:bg-[#169976] transition"
-          onClick={handleSubmit}
-        >
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} size="lg" className="gap-2">
+          <Save className="w-5 h-5" />
           Save Quiz
-        </button>
+        </Button>
       </div>
+
+      {/* Popups */}
       <Popup
         open={popupOpen}
         onClose={() => setPopupOpen(false)}

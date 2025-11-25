@@ -2,34 +2,59 @@
 
 import Link from "next/link";
 import QuizList from "@/components/QuizList";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Wand2, PenTool } from "lucide-react";
 
 export default function CreateQuizPage() {
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
-      <h1 className="text-3xl font-bold mb-6 text-white">Create a Quiz</h1>
+    <div className="max-w-6xl mx-auto py-10 px-4 bg-[#000000] min-h-[calc(100vh-64px)]">
+      <div className="mb-10">
+        <h1 className="text-4xl font-bold mb-3 text-white">Create a Quiz</h1>
+        <p className="text-white/70 text-lg">
+          Choose how you want to build your quiz
+        </p>
+      </div>
 
       {/* Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         <Link href="/create/manual">
-          <div className="cursor-pointer p-6 rounded-lg border border-[#169976] bg-[#222222] hover:border-[#1DCD9F] hover:shadow-[0_0_0_2px_rgba(29,205,159,0.25)] transition">
-            <h2 className="text-xl font-semibold mb-2 text-white">
-              Manual Create
-            </h2>
-            <p className="text-white/70">
-              Build your quiz question by question.
-            </p>
-          </div>
+          <Card className="cursor-pointer hover:border-[#1DCD9F] hover:shadow-lg hover:shadow-[#1DCD9F]/20 transition-all h-full">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-[#1DCD9F]/10">
+                  <PenTool className="w-6 h-6 text-[#1DCD9F]" />
+                </div>
+                <CardTitle className="text-2xl">Manual Create</CardTitle>
+              </div>
+              <CardDescription className="text-base mt-3">
+                Build your quiz question by question with full control over
+                every detail.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </Link>
 
         <Link href="/create/ai">
-          <div className="cursor-pointer p-6 rounded-lg border border-[#169976] bg-[#222222] hover:border-[#1DCD9F] hover:shadow-[0_0_0_2px_rgba(29,205,159,0.25)] transition">
-            <h2 className="text-xl font-semibold mb-2 text-white">
-              AI Generate
-            </h2>
-            <p className="text-white/70">
-              Let AI generate questions based on a topic.
-            </p>
-          </div>
+          <Card className="cursor-pointer hover:border-[#1DCD9F] hover:shadow-lg hover:shadow-[#1DCD9F]/20 transition-all h-full">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-[#1DCD9F]/10">
+                  <Wand2 className="w-6 h-6 text-[#1DCD9F]" />
+                </div>
+                <CardTitle className="text-2xl">AI Generate</CardTitle>
+              </div>
+              <CardDescription className="text-base mt-3">
+                Let AI generate questions based on a topic with customizable
+                options.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </Link>
       </div>
 
