@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://quizappfe.vercel.app",
+  "https://quiz-app-sandy-omega.vercel.app",
   process.env.FRONTEND_URL, // Your Vercel frontend URL
 ];
 
